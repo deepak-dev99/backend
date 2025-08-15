@@ -1,7 +1,20 @@
 from base import *
 
 
-class InventoryCatrgoryModel(BaseModel):
-    name: str
+class CategoryModel(BaseModel):
+    category_name: str
+
+
+class SubCategoryModel(BaseModel):
+    category_id: str
+    sub_category_name: str
+    
+    
+    
+class ProductTypeModel(BaseModel):
+    category_id: str
+    sub_category_id: str
+    product_type_name: str
+    
 
 

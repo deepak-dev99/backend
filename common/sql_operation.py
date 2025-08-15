@@ -4,42 +4,52 @@ class CommonDB:
     
     
     def __init__(self):
-        # Step 1: Connect to the default 'postgres' DB with autocommit
-        db_connect = psycopg2.connect(
-            host=os.getenv("DB_HOST"),
-            port=os.getenv("DB_PORT"),
-            user=os.getenv("DB_USER"),
-            password=os.getenv("DB_PASSWORD"),
-            dbname="postgres"  # important: connect to existing DB to create new one
-        )
-        db_connect.autocommit = True  # ✅ REQUIRED for CREATE DATABASE
-        cur = db_connect.cursor()
-
-        # Step 2: Check if target DB exists
-        target_db = os.getenv("DB_NAME")
-        cur.execute("SELECT datname FROM pg_database WHERE datistemplate = false;")
-        dbs = [db[0] for db in cur.fetchall()]
-        if target_db not in dbs:
-            cur.execute(f"CREATE DATABASE {target_db}")
-            print(f"✅ Database '{target_db}' created.")
-        else:
-            print(f"ℹ️ Database '{target_db}' already exists.")
-
-        cur.close()
-        db_connect.close()
-
-        # Step 3: Connect to the target DB
-        self.db_connect = psycopg2.connect(
-            host=os.getenv("DB_HOST"),
-            port=os.getenv("DB_PORT"),
-            user=os.getenv("DB_USER"),
-            password=os.getenv("DB_PASSWORD"),
-            dbname=target_db
-        )
         
         
-        if target_db not in dbs:
-            migrator(self.db_connect)
+        try:
+                
+            # Step 1: Connect to the default 'postgres' DB with autocommit
+            db_connect = psycopg2.connect(
+                host=os.getenv("DB_HOST"),
+                port=os.getenv("DB_PORT"),
+                user=os.getenv("DB_USER"),
+                password=os.getenv("DB_PASSWORD"),
+                dbname="postgres"  # important: connect to existing DB to create new one
+            )
+            db_connect.autocommit = True  # ✅ REQUIRED for CREATE DATABASE
+            cur = db_connect.cursor()
+
+            # Step 2: Check if target DB exists
+            target_db = os.getenv("DB_NAME")
+            cur.execute("SELECT datname FROM pg_database WHERE datistemplate = false;")
+            dbs = [db[0] for db in cur.fetchall()]
+            if target_db not in dbs:
+                cur.execute(f"CREATE DATABASE {target_db}")
+                print(f"✅ Database '{target_db}' created.")
+            else:
+                print(f"ℹ️ Database '{target_db}' already exists.")
+
+            cur.close()
+            db_connect.close()
+
+            # Step 3: Connect to the target DB
+            self.db_connect = psycopg2.connect(
+                host=os.getenv("DB_HOST"),
+                port=os.getenv("DB_PORT"),
+                user=os.getenv("DB_USER"),
+                password=os.getenv("DB_PASSWORD"),
+                dbname=target_db
+            )
+            
+            
+            if target_db not in dbs:
+                migrator(self.db_connect)
+
+        except Exception as e:
+            print("Error name:", type(e).__name__)
+            print("Error message:", str(e))
+            print(f"{type(e).__name__}: {e}")
+            traceback.print_exc()
 
     def create_database(self):
         

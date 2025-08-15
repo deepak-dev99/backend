@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 import os
 from datetime import datetime, timedelta
 from jose import JWTError, jwt
-
+import traceback
 
 from pydantic import BaseModel
 
@@ -28,5 +28,4 @@ import common.auth as caa
 
 
 from routes import auth
-from routes import 
-
+from routes import inventory

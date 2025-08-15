@@ -12,7 +12,7 @@ app.state.db = cso.CommonDB()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # or ["http://localhost:3000"] etc.
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -29,4 +29,5 @@ def home():
 
 
 
-app.include_router(auth.router, prefix="/api", tags=["User"])   
+app.include_router(auth.router, prefix="/api/auth", tags=["User"])   
+app.include_router(inventory.router, prefix="/api/inventory", tags=["Inventory"])   
