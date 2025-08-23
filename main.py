@@ -31,3 +31,7 @@ def home():
 
 app.include_router(auth.router, prefix="/api/auth", tags=["User"])   
 app.include_router(inventory.router, prefix="/api/inventory", tags=["Inventory"])   
+app.include_router(statistics.router, prefix="/api/statistics", tags=["statistics"])   
+app.include_router(common.router, prefix="/common", tags=["common"])   
+app.include_router(customer.router, prefix="/api/customer", tags=["customer"])   
+

@@ -104,12 +104,86 @@ class CommonDB:
 
 
 def migrator(db_connect):
-    user_table_create = '''CREATE TABLE users(  
+    user_table_create = '''
+    
+    
+
+
+CREATE TABLE users(  
         id int NOT NULL PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
         name VARCHAR(255),
+        username VARCHAR(255),
+        email VARCHAR(255),
         mobile_number VARCHAR(255),
-        password VARCHAR(255)
-    );'''
+        password VARCHAR(255),
+        status BOOLEAN
+    );
+
+    
+
+
+    CREATE TABLE category(  
+        id int NOT NULL PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+        category_name VARCHAR(255),
+        status BOOLEAN DEFAULT True);
+
+
+    CREATE TABLE sub_category(  
+        id int NOT NULL PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+        category_id INT,
+        sub_category_name VARCHAR(255),
+        status BOOLEAN DEFAULT True);
+
+        
+    CREATE TABLE product_type(  
+        id int NOT NULL PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+        category_id INT,
+        sub_category_id INT,
+        product_type_name VARCHAR(255),
+        status BOOLEAN DEFAULT True);
+
+    
+    
+    
+        
+    CREATE TABLE customers (
+        id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        email VARCHAR(255) UNIQUE,
+        phone VARCHAR(50),
+        address TEXT,
+        city VARCHAR(100),
+        state VARCHAR(100),
+        country VARCHAR(100),
+        zip_code VARCHAR(20),
+        customer_type VARCHAR(50), -- e.g., 'Individual', 'Business'
+        status BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+
+
+
+    CREATE TABLE sub_customers (
+        id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+        customer_id INT NOT NULL,
+        name VARCHAR(255) NOT NULL,
+        email VARCHAR(255),
+        phone VARCHAR(50),
+        address TEXT,
+        city VARCHAR(100),
+        state VARCHAR(100),
+        country VARCHAR(100),
+        zip_code VARCHAR(20),
+        status BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE
+    );
+
+    
+    '''
     
     
     print("going to create table start")
