@@ -10,7 +10,7 @@ router = APIRouter()
 
 @router.post("/category", status_code=200)
 @router.patch("/category/{cat_id}", status_code=200)
-async def category_creation_and_updation(request: Request,cat_id,category: Inventory.CategoryModel = Depends(Inventory.CategoryModel.as_form),category_image: UploadFile = File(None)):
+async def category_creation_and_updation(request: Request,cat_id=None,category: Inventory.CategoryModel = Depends(Inventory.CategoryModel.as_form),category_image: UploadFile = File(None)):
     
     print("category called",request,category,cat_id)
 
