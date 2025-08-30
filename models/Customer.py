@@ -44,7 +44,7 @@ class CustomerModel(BaseModel):
 
 
 class SubCustomerModel(BaseModel):
-    customer_id: int
+    customer_id: str
     name: str
     email: Optional[EmailStr] = None
     phone: Optional[str] = None
@@ -58,7 +58,7 @@ class SubCustomerModel(BaseModel):
     @classmethod
     def as_form(
         cls,
-        customer_id: int = Form(...),
+        customer_id: str = Form(...),
         name: str = Form(...),
         email: Optional[EmailStr] = Form(None),
         phone: Optional[str] = Form(None),

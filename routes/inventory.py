@@ -9,9 +9,10 @@ router = APIRouter()
 
 
 @router.post("/category", status_code=200)
-async def category_creation(request: Request,category: Inventory.CategoryModel = Depends(Inventory.CategoryModel.as_form),category_image: UploadFile = File(None)):
+@router.patch("/category/{cat_id}", status_code=200)
+async def category_creation_and_updation(request: Request,cat_id,category: Inventory.CategoryModel = Depends(Inventory.CategoryModel.as_form),category_image: UploadFile = File(None)):
     
-    print("category called",request,category)
+    print("category called",request,category,cat_id)
 
 
     category_image_url = ""
@@ -47,9 +48,35 @@ async def category_list(request: Request):
     
     
     print(request.app)
-    sql_q = f"select * from category where status = TRUE"
+    sql_q = f"select uuid as id,category_name,category_image from category where status = TRUE"
     data = request.app.state.db.get_data_as_json(sql_q,())
     return JSONResponse(status_code=200, content={"status": True, "message":"Category Fetched Successfully","data": data})
+    
+        
+
+
+@router.delete("/category/{cat_id}", status_code=200)
+async def category_delete(request: Request,cat_id):
+    
+    
+    print(request.app,"cat_idcat_idcat_id",cat_id)
+    sql_q = f"delete from category where uuid = %s"
+    data = request.app.state.db.delete_data(sql_q,(cat_id,))
+    return JSONResponse(status_code=200, content={"status": True, "message":"Category Deleted Successfully","data": data})
+    
+    
+    
+    
+    
+
+@router.patch("/category/{cat_id}", status_code=200)
+async def category_delete(request: Request,cat_id,category: Inventory.CategoryModel = Depends(Inventory.CategoryModel.as_form),category_image: UploadFile = File(None)):
+    
+    
+    print(request.app,"cat_idcat_idcat_id",cat_id,category,category_image)
+    # sql_q = f"delete from category where uuid = %s"
+    # data = request.app.state.db.delete_data(sql_q,(cat_id,))
+    # return JSONResponse(status_code=200, content={"status": True, "message":"Category Deleted Successfully","data": data})
     
     
     
@@ -82,10 +109,21 @@ async def brand_list(request: Request):
     
     
     print(request.app)
-    sql_q = f"select * from brand where status = TRUE"
+    sql_q = f"select brand_name, uuid as id from brand where status = TRUE"
     data = request.app.state.db.get_data_as_json(sql_q,())
     return JSONResponse(status_code=200, content={"status": True, "message":"Brand Fetched Successfully","data": data})
     
+    
+    
+
+@router.delete("/brand/{brand_id}", status_code=200)
+async def brand_delete(request: Request,brand_id):
+    
+    
+    print(request.app,"cat_idcat_idcat_id",brand_id)
+    sql_q = f"delete from brand where uuid = %s"
+    data = request.app.state.db.delete_data(sql_q,(brand_id,))
+    return JSONResponse(status_code=200, content={"status": True, "message":"Brand Deleted Successfully","data": data})
     
     
 
@@ -93,6 +131,7 @@ async def brand_list(request: Request):
 async def unit_creation(request: Request,unit: Inventory.UnitModel):
     
     print("unit called",request,unit)
+
 
     
     sql_q = f"INSERT INTO unit (unit_name) VALUES (%s)"
@@ -115,8 +154,22 @@ async def unit_list(request: Request):
     
     print(request.app)
     sql_q = f"select * from unit where status = TRUE"
+    
+    sql_q = f"select unit_name, uuid as id from unit where status = TRUE"
     data = request.app.state.db.get_data_as_json(sql_q,())
     return JSONResponse(status_code=200, content={"status": True, "message":"Unit Fetched Successfully","data": data})
+    
+    
+    
+
+@router.delete("/unit/{unit_id}", status_code=200)
+async def unit_delete(request: Request,unit_id):
+    
+    
+    print(request.app,"cat_idcat_idcat_id",unit_id)
+    sql_q = f"delete from unit where uuid = %s"
+    data = request.app.state.db.delete_data(sql_q,(unit_id,))
+    return JSONResponse(status_code=200, content={"status": True, "message":"Unit Deleted Successfully","data": data})
     
     
     
@@ -146,9 +199,21 @@ async def store_list(request: Request):
     
     
     print(request.app)
-    sql_q = f"select * from store where status = TRUE"
+    sql_q = f"select uuid as id,store_name from store where status = TRUE"
     data = request.app.state.db.get_data_as_json(sql_q,())
     return JSONResponse(status_code=200, content={"status": True, "message":"Store Fetched Successfully","data": data})
+    
+    
+    
+
+@router.delete("/store/{store_id}", status_code=200)
+async def store_delete(request: Request,store_id):
+    
+    
+    print(request.app,"cat_idcat_idcat_id",store_id)
+    sql_q = f"delete from store where uuid = %s"
+    data = request.app.state.db.delete_data(sql_q,(store_id,))
+    return JSONResponse(status_code=200, content={"status": True, "message":"Store Deleted Successfully","data": data})
     
     
     
@@ -180,11 +245,21 @@ async def warehouse_list(request: Request):
     
     
     print(request.app)
-    sql_q = f"select * from warehouse where status = TRUE"
+    sql_q = f"select uuid as id,warehouse_name from warehouse where status = TRUE"
     data = request.app.state.db.get_data_as_json(sql_q,())
     return JSONResponse(status_code=200, content={"status": True, "message":"Warehouse Fetched Successfully","data": data})
     
     
+    
+    
+@router.delete("/warehouse/{warehouse_id}", status_code=200)
+async def warehouse_delete(request: Request,warehouse_id):
+    
+    
+    print(request.app,"cat_idcat_idcat_id",warehouse_id)
+    sql_q = f"delete from warehouse where uuid = %s"
+    data = request.app.state.db.delete_data(sql_q,(warehouse_id,))
+    return JSONResponse(status_code=200, content={"status": True, "message":"Warehouse Deleted Successfully","data": data})
     
     
 
@@ -215,12 +290,21 @@ async def sub_category_list(request: Request):
     
     
     print(request.app)
-    sql_q = f"SELECT sub_c.id as id,c.id as category_id,c.category_name as category_name, sub_c.sub_category_name from public.sub_category as sub_c join public.category as c on c.id = sub_c.category_id where sub_c.status = TRUE"
+    sql_q = f"SELECT sub_c.uuid as id,c.uuid as category_id,c.category_name as category_name, sub_c.sub_category_name from public.sub_category as sub_c join public.category as c on c.uuid = sub_c.category_id where sub_c.status = TRUE"
     data = request.app.state.db.get_data_as_json(sql_q,())
     return JSONResponse(status_code=200, content={"status": True, "message":"Subcategory Fetched Successfully","data": data})
     
 
 
+@router.delete("/sub_category/{sub_category_id}", status_code=200)
+async def sub_category_delete(request: Request,sub_category_id):
+    
+    
+    print(request.app,"cat_idcat_idcat_id",sub_category_id)
+    sql_q = f"delete from sub_category where uuid = %s"
+    data = request.app.state.db.delete_data(sql_q,(sub_category_id,))
+    return JSONResponse(status_code=200, content={"status": True, "message":"Sub Category Deleted Successfully","data": data})
+    
 
 
 
@@ -251,18 +335,18 @@ async def product_type(request: Request):
     
     print(request.app)
     sql_q = f"""
-        SELECT cat_sub_data.category_name,cat_sub_data.sub_category_name,pt.*
+        SELECT cat_sub_data.category_name,cat_sub_data.sub_category_name,pt.uuid as id,pt.category_id,pt.sub_category_id,pt.product_type_name
         FROM public.product_type AS pt join (
-            SELECT 
-                c.id AS id,
-                c.id AS category_id,
+            SELECT  
+                c.uuid AS category_id,
                 c.category_name AS category_name,
-                sub_c.sub_category_name
+                sub_c.sub_category_name,
+                sub_c.uuid AS sub_category_id
             FROM public.sub_category AS sub_c
             JOIN public.category AS c 
-                ON c.id = sub_c.category_id
+                ON c.uuid = sub_c.category_id
         ) AS cat_sub_data
-            ON pt.sub_category_id = cat_sub_data.id
+            ON pt.sub_category_id = cat_sub_data.sub_category_id
         where pt.status = TRUE;
     """
     
@@ -314,29 +398,37 @@ async def product_list(request: Request):
     
     print(request.app)
     sql_q = f"""SELECT 
-    b.id AS brand_id,
     b.brand_name,
     u.unit_name,
-    pd.*,
+    
+pd.uuid as id,
+pd.stock_quantity,
+pd.category_id,
+pd.sub_category_id,
+pd.product_type_id,
+pd.brand_id,
+pd.unit_id,
+pd.product_name,
+pd.product_image,
     ptd.*
     FROM (
         SELECT 
             c.category_name,
             sub_c.sub_category_name,
             pt.product_type_name,
-            pt.id as pt_id
+            pt.uuid as pt_id
         FROM public.product_type AS pt
         JOIN public.sub_category AS sub_c
-            ON pt.sub_category_id = sub_c.id
+            ON pt.sub_category_id = sub_c.uuid
         JOIN public.category AS c
-            ON c.id = sub_c.category_id
+            ON c.uuid = sub_c.category_id
     ) AS ptd
     JOIN public.product AS pd 
         ON pd.product_type_id = ptd.pt_id
     JOIN public.brand AS b
-        ON b.id = pd.brand_id
+        ON b.uuid = pd.brand_id
     JOIN public.unit AS u
-        ON u.id = pd.unit_id;
+        ON u.uuid = pd.unit_id;
     """
     data = request.app.state.db.get_data_as_json(sql_q,())
     return JSONResponse(status_code=200, content={"status": True, "message":"Product Fetched Successfully","data": data})
@@ -362,31 +454,37 @@ async def product_list_non_admin(request: Request,
 
     sql_q = f"""
         SELECT 
-            b.id AS brand_id,
             b.brand_name,
             u.unit_name,
             ppr.price::text AS price,
-            pd.*,
+            pd.uuid as id,
+            pd.category_id,
+            pd.sub_category_id,
+            pd.product_type_id,
+            pd.brand_id,
+            pd.unit_id,
+            pd.product_name,
+            pd.product_image,
             ptd.*
         FROM (
             SELECT 
                 c.category_name,
                 sub_c.sub_category_name,
                 pt.product_type_name,
-                pt.id as pt_id
+                pt.uuid as pt_id
             FROM public.product_type AS pt
             JOIN public.sub_category AS sub_c
-                ON pt.sub_category_id = sub_c.id
+                ON pt.sub_category_id = sub_c.uuid
             JOIN public.category AS c
-                ON c.id = sub_c.category_id
+                ON c.uuid = sub_c.category_id
             {where_clause}
         ) AS ptd
         JOIN public.product AS pd 
             ON pd.product_type_id = ptd.pt_id
         JOIN public.brand AS b
-            ON b.id = pd.brand_id
+            ON b.uuid = pd.brand_id
         JOIN public.unit AS u
-            ON u.id = pd.unit_id
+            ON u.uuid = pd.unit_id
         LEFT JOIN (
             SELECT DISTINCT ON (product_id)
                 product_id,
@@ -394,7 +492,7 @@ async def product_list_non_admin(request: Request,
             FROM public.product_prices
             ORDER BY product_id, id DESC
         ) AS ppr
-            ON ppr.product_id = pd.id;
+            ON ppr.product_id = pd.uuid;
 
     """
     
@@ -427,11 +525,11 @@ async def manage_stock_creation(request: Request,ProductStockMovementModel: Inve
     
     
     sql_q = {
-        "IN":f"""UPDATE product SET stock_quantity = stock_quantity + %s WHERE id = %s;""",
-        "RETURN_IN":f"""UPDATE product SET stock_quantity = stock_quantity + %s WHERE id = %s;""",
-        "OUT":f"""UPDATE product SET stock_quantity = stock_quantity - %s WHERE id = %s;""",
-        "RETURN_OUT":f"""UPDATE product SET stock_quantity = stock_quantity - %s WHERE id = %s;""",
-        "ADJUSTMENT":f"""UPDATE product SET stock_quantity = %s WHERE id = %s;"""
+        "IN":f"""UPDATE product SET stock_quantity = stock_quantity + %s WHERE uuid = %s;""",
+        "RETURN_IN":f"""UPDATE product SET stock_quantity = stock_quantity + %s WHERE uuid = %s;""",
+        "OUT":f"""UPDATE product SET stock_quantity = stock_quantity - %s WHERE uuid = %s;""",
+        "RETURN_OUT":f"""UPDATE product SET stock_quantity = stock_quantity - %s WHERE uuid = %s;""",
+        "ADJUSTMENT":f"""UPDATE product SET stock_quantity = %s WHERE uuid = %s;"""
     }
         
     sql_qup = sql_q[ProductStockMovementModel.movement_type]
@@ -452,7 +550,7 @@ async def manage_stock_list(request: Request):
     
     
     print(request.app)
-    sql_q = f"SELECT p.product_name,psm.movement_type,psm.note,psm.product_id,psm.quantity from product_stock_movements as psm JOIN product as p on psm.product_id = p.id;"
+    sql_q = f"SELECT p.product_name,psm.movement_type,psm.note,psm.product_id,psm.quantity from product_stock_movements as psm JOIN product as p on psm.product_id = p.uuid;"
     data = request.app.state.db.get_data_as_json(sql_q,())
     
     print(data,"datadatadatadatadata")
@@ -494,8 +592,8 @@ async def product_prices_list(request: Request):
         pr.store_id,
         st.store_name
         FROM product_prices AS pr
-        JOIN product AS pro ON pro.id = pr.product_id
-        JOIN store AS st ON st.id = pr.store_id;
+        JOIN product AS pro ON pro.uuid = pr.product_id
+        JOIN store AS st ON st.uuid = pr.store_id;
     """
     data = request.app.state.db.get_data_as_json(sql_q,())
     return JSONResponse(status_code=200, content={"status": True, "message":"Product Prices Fetched Successfully","data": data})

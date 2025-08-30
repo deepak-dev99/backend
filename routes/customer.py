@@ -46,7 +46,7 @@ async def customer_list(request: Request):
     
     
     print(request.app)
-    sql_q = f"select id,name,email,phone,address,city,state,country,zip_code,customer_type,status from customers where status = TRUE"
+    sql_q = f"select uuid as id,name,email,phone,address,city,state,country,zip_code,customer_type,status from customers where status = TRUE"
     data = request.app.state.db.get_data_as_json(sql_q,())
     
     
@@ -100,7 +100,7 @@ async def sub_customer_list(request: Request):
     
     
     print(request.app)
-    sql_q = f"SELECT c.name as customer_name,sc.customer_id,sc.name,sc.email,sc.phone,sc.address,sc.city,sc.state,sc.country,sc.zip_code from sub_customers as sc join customers as c on c.id = sc.customer_id  where sc.status = TRUE;"
+    sql_q = f"SELECT c.name as customer_name,sc.uuid as id,sc.customer_id,sc.name,sc.email,sc.phone,sc.address,sc.city,sc.state,sc.country,sc.zip_code from sub_customers as sc join customers as c on c.uuid = sc.customer_id  where sc.status = TRUE;"
     data = request.app.state.db.get_data_as_json(sql_q,())
     
     

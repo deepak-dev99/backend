@@ -42,8 +42,8 @@ class CommonDB:
             )
             
             
-            if target_db not in dbs:
-                migrator(self.db_connect)
+            # if target_db not in dbs:
+                # migrator(self.db_connect)
 
         except Exception as e:
             print("Error name:", type(e).__name__)
@@ -99,12 +99,89 @@ class CommonDB:
 
 
 
+    
+    
+    def delete_data(self, sql_query, data):
+        cur = self.db_connect.cursor()
+        try:
+            cur.execute(sql_query, data)
+            self.db_connect.commit()
+            affected = cur.rowcount  # Number of rows affected
+            cur.close()
+            return {"success": True, "rows_affected": affected}
+        except Exception as e:
+            self.db_connect.rollback()
+            cur.close()
+            return {"success": False, "error": str(e)}
 
+
+
+
+
+
+
+def migrator_v2(db_connect):
+    print("migrator_v2")
+    
+    """
+    CREATE TABLE category (
+        id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+        uuid UUID UNIQUE NOT NULL DEFAULT gen_random_uuid(),
+        category_name VARCHAR(255) NOT NULL UNIQUE,
+        status BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+        deleted BOOLEAN DEFAULT FALSE
+    );
+    
+    
+    
+    CREATE TABLE sub_category(  
+        id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+        uuid UUID UNIQUE NOT NULL DEFAULT gen_random_uuid(),
+        category_id UUID,
+        sub_category_name VARCHAR(255),
+        status BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+        deleted BOOLEAN DEFAULT FALSE
+    );
+    
+    
+    
+    
+    
+    CREATE TABLE product_type(  
+        id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+        uuid UUID UNIQUE NOT NULL DEFAULT gen_random_uuid(),
+        category_id UUID,
+        sub_category_id UUID,
+        product_type_name VARCHAR(255),
+        status BOOLEAN DEFAULT True,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+        deleted BOOLEAN DEFAULT FALSE
+    );
+        
+        
+    
+
+
+    """
+    
+    print("migrator_v2")
 
 
 
 def migrator(db_connect):
     user_table_create = '''
+    
+    
+    
+    
+    
+    
+    
     
     
 

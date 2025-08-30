@@ -154,7 +154,7 @@ class ProductModel(BaseModel):
     
 
 class ProductStockMovementModel(BaseModel):
-    product_id: int
+    product_id: str
     quantity: int
     movement_type: str
     note: Optional[str] = None
@@ -162,7 +162,7 @@ class ProductStockMovementModel(BaseModel):
     @classmethod
     def as_form(
         cls,
-        product_id: int = Form(...),
+        product_id: str = Form(...),
         quantity: int = Form(...),
         movement_type: str = Form(...),
         note: Optional[str] = Form(None)
@@ -176,22 +176,22 @@ class ProductStockMovementModel(BaseModel):
 
 
 class ProductPriceModel(BaseModel):
-    product_id: int
+    product_id: str
     price: float
     valid_from: Optional[datetime] = None
     valid_to: Optional[datetime] = None
     customer_type: Optional[str] = None
-    store_id: Optional[int] = None
+    store_id: Optional[str] = None
 
     @classmethod
     def as_form(
         cls,
-        product_id: int = Form(...),
+        product_id: str = Form(...),
         price: float = Form(...),
         valid_from: Optional[datetime] = Form(None),
         valid_to: Optional[datetime] = Form(None),
         customer_type: Optional[str] = Form(None),
-        store_id: Optional[int] = Form(None)
+        store_id: Optional[str] = Form(None)
     ):
         return cls(
             product_id=product_id,
