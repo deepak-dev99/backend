@@ -13,10 +13,11 @@ async def customer_creation(request: Request,customer: Customer.CustomerModel = 
     
     
     customer_image_url = ""
+    documents_url = ""
     if(customer_image):
         
         print(os.getcwd(),os.path.join("uploads",customer_image.filename),"os.getcwd()")
-        customer_image_url = os.path.join("uploads","customer_image",customer_image.filename)
+        customer_image_url = os.path.join("uploads","customer",customer_image.filename)
         image_save_path = os.path.join(os.getcwd(),customer_image_url)
         
         print(image_save_path,customer_image_url)
@@ -26,8 +27,8 @@ async def customer_creation(request: Request,customer: Customer.CustomerModel = 
             
 
 
-    sql_q = f"INSERT INTO customers(name,email,phone,address,city,state,country,zip_code,customer_type) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)"
-    data = request.app.state.db.save_data(sql_q,(customer.name,customer.email,customer.phone,customer.address,customer.city,customer.state,customer.country,customer.zip_code,customer.customer_type))
+    sql_q = f"INSERT INTO customers(name,email,phone,address,city,state,country,zip_code,customer_type,gst,pan,company_name,password,description,documents,customer_image) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
+    data = request.app.state.db.save_data(sql_q,(customer.name,customer.email,customer.phone,customer.address,customer.city,customer.state,customer.country,customer.zip_code,customer.customer_type,customer.gst,customer.pan,customer.company_name,customer.password,customer.description,documents_url,customer_image_url))
     
     
     print(data,"customer customer customer")
@@ -46,7 +47,7 @@ async def customer_list(request: Request):
     
     
     print(request.app)
-    sql_q = f"select uuid as id,name,email,phone,address,city,state,country,zip_code,customer_type,status from customers where status = TRUE"
+    sql_q = f"select uuid as id,name,email,phone,address,city,state,country,zip_code,pan,gst,customer_type,company_name,description,password,status,customer_image from customers where status = TRUE"
     data = request.app.state.db.get_data_as_json(sql_q,())
     
     

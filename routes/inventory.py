@@ -36,7 +36,7 @@ async def category_creation_and_updation(request: Request,cat_id=None,category: 
     print(data,"category_namecategory_name")
     
     if(data["success"]):
-        return JSONResponse(status_code=200, content={"status": True, "message":"User created Successfully","data": data})
+        return JSONResponse(status_code=200, content={"status": True, "message":"Category Successfully","data": data})
     
     else:    
         return JSONResponse(status_code=400, content={"status": False, "message":"Something went wrong"})

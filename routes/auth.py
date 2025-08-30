@@ -14,15 +14,48 @@ def login_user(request: Request,credentials: User.LoginRequest):
     print("auth_login called",request,credentials)
     
     
-    m_number = credentials.mobile_number
+    email = credentials.email
     m_passw = credentials.password
     
-    sql_q = f"select * from users where mobile_number=%s AND password=%s;"
-    data = request.app.state.db.get_data_as_json(sql_q,(m_number,m_passw))
+    sql_q = f"select * from users where email=%s AND password=%s;"
+    data = request.app.state.db.get_data_as_json(sql_q,(email,m_passw))
     
+    print(data)
     if(len(data) > 0):
         userInfo = data[0]
         del userInfo["password"]
+        userInfo["userType"]="admin_team"
+        
+        userData = {
+            "userInfo":userInfo,
+            "token":caa.create_access_token(data=userInfo)
+        }
+        
+        return JSONResponse(status_code=200, content={"status": True, "message":"Login Successfully","data": userData})
+    else:
+        return JSONResponse(status_code=401, content={"status": True, "message":"Not authorized","data": {}})
+
+
+
+
+@router.post("/customer_login", status_code=200)
+def customer_login(request: Request,credentials: User.LoginRequest):
+    
+    print("customer_login called",request,credentials)
+    
+    
+    email = credentials.email
+    m_passw = credentials.password
+    
+    sql_q = f"select id,uuid,name,email,phone,address,city,state,country,gst,pan,company_name,description,documents,customer_image from customers where email=%s AND password=%s;"
+    data = request.app.state.db.get_data_as_json(sql_q,(email,m_passw))
+    
+    print(data)
+    
+    
+    if(len(data) > 0):
+        userInfo = data[0]
+        userInfo["userType"]="customer"
         
         userData = {
             "userInfo":userInfo,

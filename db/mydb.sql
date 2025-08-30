@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict Mr6cV0EYVczNjpvSmAzNELPymthwh1xeK8AZz2ixFHSy2wa5Lnt1piCwkfxJ4dt
+\restrict 0JQcip2udma94S1WwTxgeoD8OUaONtNGseI6lo9wTM67ZG2O1NT9xSiiCwQ1hhL
 
 -- Dumped from database version 15.13 (Debian 15.13-1.pgdg120+1)
 -- Dumped by pg_dump version 17.6
@@ -105,7 +105,14 @@ CREATE TABLE public.customers (
     customer_type character varying(50),
     status boolean DEFAULT true,
     created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    gst character varying(255),
+    pan character varying(255),
+    company_name character varying(255),
+    password character varying(255),
+    description text,
+    documents character varying(255),
+    customer_image character varying(255)
 );
 
 
@@ -715,5 +722,5 @@ ALTER TABLE ONLY public.warehouse
 -- PostgreSQL database dump complete
 --
 
-\unrestrict Mr6cV0EYVczNjpvSmAzNELPymthwh1xeK8AZz2ixFHSy2wa5Lnt1piCwkfxJ4dt
+\unrestrict 0JQcip2udma94S1WwTxgeoD8OUaONtNGseI6lo9wTM67ZG2O1NT9xSiiCwQ1hhL
 

@@ -1,7 +1,7 @@
 from base import *
 
 class LoginRequest(BaseModel):
-    mobile_number: str
+    email: str
     password: str
 
 
