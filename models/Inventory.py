@@ -123,6 +123,7 @@ class ProductModel(BaseModel):
     brand_id: str
     unit_id:str
     product_name: str
+    product_price:float
 
     @classmethod
     def as_form(
@@ -133,6 +134,7 @@ class ProductModel(BaseModel):
         brand_id: str = Form(...),
         unit_id: str = Form(...),
         product_name: str = Form(...),
+        product_price: float = Form(...),
         
     ):
         return cls(
@@ -142,6 +144,7 @@ class ProductModel(BaseModel):
             brand_id=brand_id,
             unit_id=unit_id,
             product_name=product_name,
+            product_price=product_price
             
         )
 

@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict 0JQcip2udma94S1WwTxgeoD8OUaONtNGseI6lo9wTM67ZG2O1NT9xSiiCwQ1hhL
+\restrict Ksigvp1ne01yA1qRSoDyrLYVkB41GQbEtlpXqMkvlX0vSydW2MecTwWerMAgccO
 
 -- Dumped from database version 15.13 (Debian 15.13-1.pgdg120+1)
 -- Dumped by pg_dump version 17.6
@@ -150,7 +150,8 @@ CREATE TABLE public.product (
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     deleted boolean DEFAULT false,
-    stock_quantity integer DEFAULT 0
+    stock_quantity integer DEFAULT 0,
+    product_price numeric(10,2)
 );
 
 
@@ -722,5 +723,5 @@ ALTER TABLE ONLY public.warehouse
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 0JQcip2udma94S1WwTxgeoD8OUaONtNGseI6lo9wTM67ZG2O1NT9xSiiCwQ1hhL
+\unrestrict Ksigvp1ne01yA1qRSoDyrLYVkB41GQbEtlpXqMkvlX0vSydW2MecTwWerMAgccO
 

@@ -12,3 +12,12 @@ def create_access_token(data: dict, expires_delta: timedelta = None):
     
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
+
+
+def decode_access_token(token: str):
+    
+    
+    decoded_jwt = jwt.decode(token, SECRET_KEY)
+    
+    print(decoded_jwt,"decoded_jwtdecoded_jwt")
+    return decoded_jwt

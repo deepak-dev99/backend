@@ -378,8 +378,8 @@ async def product_creation(request: Request,product: Inventory.ProductModel = De
             
 
     
-    sql_q = f"INSERT INTO product(category_id,sub_category_id,product_type_id,brand_id,unit_id,product_name,product_image) VALUES (%s,%s,%s,%s,%s,%s,%s)"
-    data = request.app.state.db.save_data(sql_q,(product.category_id,product.sub_category_id,product.product_type_id,product.brand_id,product.unit_id,product.product_name,product_image_url))
+    sql_q = f"INSERT INTO product(category_id,sub_category_id,product_type_id,brand_id,unit_id,product_name,product_image,product_price) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)"
+    data = request.app.state.db.save_data(sql_q,(product.category_id,product.sub_category_id,product.product_type_id,product.brand_id,product.unit_id,product.product_name,product_image_url,product.product_price))
     
     
     print(data,"category_namecategory_name")
@@ -453,7 +453,8 @@ async def product_list_non_admin(request: Request,
         params.append(category)
 
     sql_q = f"""
-        SELECT 
+        
+            SELECT 
             b.brand_name,
             u.unit_name,
             ppr.price::text AS price,
@@ -489,10 +490,10 @@ async def product_list_non_admin(request: Request,
             SELECT DISTINCT ON (product_id)
                 product_id,
                 price::text
-            FROM public.product_prices
+            FROM public.product_prices WHERE customer_type = 'e8351b59-9b12-42c6-a554-28e8902d7c49'
             ORDER BY product_id, id DESC
         ) AS ppr
-            ON ppr.product_id = pd.uuid;
+            ON ppr.product_id = pd.uuid WHERE price is NOT NULL;
 
     """
     
