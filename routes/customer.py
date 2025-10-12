@@ -5,6 +5,41 @@ from models import Customer
 router = APIRouter()
 
 
+@router.post("/customer-review", status_code=200)
+
+async def customer_review(request: Request):
+    data = await request.json()
+    
+    
+    user_details_id = request.state.user_details["uuid"]
+    
+    enquiry_id = str(uuid.uuid4())  # unique ID
+
+    sql_q = """
+        INSERT INTO enquiries (
+            id, name, email, bill_number, phone, enquiry_text,user_id
+        )
+        VALUES (%s,%s,%s,%s,%s,%s,%s)
+    """
+
+    values = (
+        enquiry_id,
+        data["name"],
+        data["email"],
+        data["billNumber"],
+        data["phone"],
+        data["enquiry"],
+        user_details_id
+    )
+
+    try:
+        request.app.state.db.save_data(sql_q, values)  # your DB helper
+        return JSONResponse(status_code=200, content={"status": True, "message": "Enquiry saved successfully"})
+    except Exception as e:
+        return JSONResponse(status_code=400, content={"status": False, "error": str(e)})
+
+    
+
 @router.post("/customer", status_code=200)
 async def customer_creation(request: Request,customer: Customer.CustomerModel = Depends(Customer.CustomerModel.as_form),customer_image: UploadFile = File(None)):
     
@@ -42,16 +77,71 @@ async def customer_creation(request: Request,customer: Customer.CustomerModel = 
 
 
 
+
+
+
+
+
+
+@router.get("/getmysubcustomer", status_code=200)
+async def getmysubcustomer_list(request: Request):
+    
+    
+    cid = request.state.user_details["uuid"]
+    print(request.state.token,type(request.state.user_details),"requestrequestrequest")
+    sql_q = f"SELECT id,uuid,customer_id,name,email,phone,address,city,state,country,zip_code,status FROM sub_customers WHERE customer_id = '{cid}';"
+    data = request.app.state.db.get_data_as_json(sql_q,())
+    
+    
+    # print(data,"datadatadata")
+    return JSONResponse(status_code=200, content={"status": True, "message":"Customer Fetched Successfully","data": data})
+    
+    
+
+
+
+@router.get("/customer-review", status_code=200)
+async def customer_review_list(request: Request):
+    
+    user_details_id = request.state.user_details["uuid"]
+    print(request.state.token,request.state.user_details,"requestrequestrequest")
+    sql_q = f"""SELECT
+    e.id AS enquiry_id,
+    e.name AS enquiry_name,
+    e.email AS enquiry_email,
+    e.bill_number,
+    e.phone AS enquiry_phone,
+    e.enquiry_text,
+    c.id AS customer_id,
+    c.name AS customer_name,
+    c.email AS customer_email,
+    c.phone AS customer_phone,
+    c.address AS customer_address
+FROM enquiries e
+LEFT JOIN customers c
+    ON e.user_id = c.uuid;
+    """
+    data = request.app.state.db.get_data_as_json(sql_q,())
+    
+    
+    # print(data,"datadatadata")
+    return JSONResponse(status_code=200, content={"status": True, "message":"Customer Fetched Successfully","data": data})
+    
+    
+
+
+
+
 @router.get("/customer", status_code=200)
 async def customer_list(request: Request):
     
     
-    print(request.app)
+    print(request.state.token,request.state.user_details,"requestrequestrequest")
     sql_q = f"select uuid as id,name,email,phone,address,city,state,country,zip_code,pan,gst,customer_type,company_name,description,password,status,customer_image from customers where status = TRUE"
     data = request.app.state.db.get_data_as_json(sql_q,())
     
     
-    print(data,"datadatadata")
+    # print(data,"datadatadata")
     return JSONResponse(status_code=200, content={"status": True, "message":"Customer Fetched Successfully","data": data})
     
     

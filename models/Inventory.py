@@ -1,8 +1,63 @@
 from base import *
 
+class CartItemModel(BaseModel):
+    brand_name: str
+    unit_name: str
+    price: float
+    id: str
+    category_id: str
+    sub_category_id: str
+    product_type_id: str
+    brand_id: str
+    unit_id: str
+    product_name: str
+    product_image: str
+    category_name: str
+    sub_category_name: str
+    product_type_name: str
+    pt_id: str
+    qty: int
+    totalPrice: float
+
+
+class OrderModel(BaseModel):
+    subcustomerId: str
+    deliveryName: str
+    mobile: str
+    email: EmailStr
+    pincode: str
+    address: str
+    district: str
+    state: str
+    country: str
+    note: str = ""
+    deliveryMode: str = ""
+    orderType: str = ""
+    igst: float
+    cgst: float
+    subtotal: float
+    total: float
+    cartList: List[CartItemModel]
+    
+    
+    
+    
 
 class CategoryModel(BaseModel):
     category_name: str
+    
+    @classmethod
+    def as_form(
+        cls,
+        category_name: str = Form(...)
+    ):
+        return cls(
+            category_name=category_name 
+        )
+        
+        
+class BannerModel(BaseModel):
+    banner_name: str
     
     @classmethod
     def as_form(

@@ -86,14 +86,29 @@ class CommonDB:
     def save_data(self, sql_query, data):
         cur = self.db_connect.cursor()
         try:
+            
+            if("RETURNING" not in sql_query and "INSERT" in sql_query):
+                sql_query = sql_query.replace(";","")+" RETURNING id;"
+            
+            print(sql_query,"sql_querysql_querysql_query")
             cur.execute(sql_query, data)
+            
+            list_fetch = cur.fetchone()
+            
+            new_id = ""
+            if(len(list_fetch) > 0):
+                new_id = list_fetch[0]
+                
+                
             self.db_connect.commit()
             affected = cur.rowcount  # Number of rows affected
             cur.close()
-            return {"success": True, "rows_affected": affected}
+            return {"success": True, "rows_affected": affected, "new_id":new_id}
         except Exception as e:
             self.db_connect.rollback()
             cur.close()
+            
+            print(traceback.print_exc())
             return {"success": False, "error": str(e)}
 
 

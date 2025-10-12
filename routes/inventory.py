@@ -8,12 +8,174 @@ router = APIRouter()
 
 
 
+
+@router.post("/banner", status_code=200)
+@router.patch("/banner/{banner_id}", status_code=200)
+async def banner_creation_and_updation(request: Request,banner_id=None, banner: Inventory.BannerModel = Depends(Inventory.CategoryModel.as_form),banner_image: UploadFile = File(None)):
+    
+    print("banner called",request,banner,banner_id)
+
+
+    banner_image_url = ""
+    if(banner_image):
+        
+        print(os.getcwd(),os.path.join("uploads",banner_image.filename),"os.getcwd()")
+        banner_image_url = os.path.join("uploads","banner",banner_image.filename)
+        image_save_path = os.path.join(os.getcwd(),banner_image_url)
+        
+        print(image_save_path,banner_image_url)
+        with open(image_save_path, "wb") as f:
+            print(image_save_path,banner_image_url)
+            f.write(await banner_image.read())
+            
+
+    
+    sql_q = f"INSERT INTO banner (banner_name,banner_image) VALUES (%s,%s)"
+    data = request.app.state.db.save_data(sql_q,(banner.banner_name,banner_image_url))
+    
+    
+    print(data,"banner_namecategory_name")
+    
+    if(data["success"]):
+        return JSONResponse(status_code=200, content={"status": True, "message":"Banner Successfully","data": data})
+    
+    else:    
+        return JSONResponse(status_code=400, content={"status": False, "message":"Something went wrong"})
+    
+
+
+@router.get("/banner", status_code=200)
+async def banner_list(request: Request):
+    
+    
+    print(request.app)
+    sql_q = f"select uuid as id,banner_name,banner_image from banner where status = TRUE"
+    data = request.app.state.db.get_data_as_json(sql_q,())
+    return JSONResponse(status_code=200, content={"status": True, "message":"Banner Fetched Successfully","data": data})
+    
+        
+
+
+@router.delete("/banner/{cat_id}", status_code=200)
+async def banner_delete(request: Request,banner_id):
+    
+    
+    print(request.app,"cat_idcat_idcat_id",banner_id)
+    sql_q = f"delete from banner where uuid = %s"
+    data = request.app.state.db.delete_data(sql_q,(banner_id,))
+    return JSONResponse(status_code=200, content={"status": True, "message":"banner Deleted Successfully","data": data})
+    
+    
+
+
+@router.get("/order-list", status_code=200)
+async def order_list(request: Request):
+    
+    
+    
+    
+    sql_q = f"""
+SELECT
+    o.id AS order_id,
+    o.customer_id,
+    o.order_number,
+    o.order_status,
+    o.subcustomer_id,
+    o.delivery_name,
+    o.email,
+    o.mobile,
+    o.address,
+    o.district,
+    o.state,
+    o.country,
+    o.pincode,
+    o.subtotal::TEXT AS subtotal,
+    o.cgst::TEXT AS cgst,
+    o.igst::TEXT AS igst,
+    o.total::TEXT AS total,
+    o.note,
+    o.delivery_mode,
+    o.order_type,
+    json_agg(
+        json_build_object(
+            'order_item_id', oi.id,
+            'product_id', oi.product_id,
+            'product_name', oi.product_name,
+            'qty', oi.qty::TEXT,
+            'price', oi.price::TEXT,
+            'total_price', oi.total_price::TEXT,
+            'product_image', oi.product_image
+        )
+    ) AS items
+FROM orders o
+JOIN order_items oi ON oi.order_id = o.id
+GROUP BY o.id
+ORDER BY o.id;
+"""
+    data = request.app.state.db.get_data_as_json(sql_q,())
+    
+
+    return JSONResponse(status_code=200, content={"status": True, "message":"Order Successfully","data": data})
+    
+@router.post("/place-order", status_code=200)
+async def place_order(request: Request,order: Inventory.OrderModel):
+    
+    
+    
+    try:
+        print(order,request.state.user_details["uuid"],"orderorderorderorderorderorderorder")
+        
+        subcustomerId = order.subcustomerId
+        
+        if(order.subcustomerId == "not-listed"):
+            sql_q = f"INSERT INTO sub_customers(customer_id,name,email,phone,address,city,state,country,zip_code) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING uuid;"
+            data = request.app.state.db.save_data(sql_q,(request.state.user_details["uuid"],order.deliveryName,order.email,order.mobile,order.address,order.district,order.state,order.country,order.pincode))
+            subcustomerId = data["new_id"]
+            
+            
+            
+        
+        
+        order_id = str(uuid.uuid4())
+        sql_q = f"INSERT INTO orders(id,customer_id, subcustomer_id, delivery_name, email, mobile, address, district, state, country, pincode,subtotal, cgst, igst, total, note, delivery_mode, order_type) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);"
+        data = request.app.state.db.save_data(sql_q,(order_id,request.state.user_details["uuid"],subcustomerId,order.deliveryName,order.email,order.mobile,order.address,order.district,order.state,order.country,order.pincode,order.subtotal,order.cgst,order.igst,order.total,order.note,order.deliveryMode,order.orderType))
+            
+            
+            
+        print("ckodisacmkwcmlkwecklwm")
+        item_query = """
+            INSERT INTO order_items (id, order_id, product_id, product_name, qty, price, total_price, product_image)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
+        """
+        for item in order.cartList:
+            request.app.state.db.save_data(item_query,(str(uuid.uuid4()),order_id,item.id,item.product_name,item.qty,item.price,item.totalPrice,item.product_image))
+        
+        
+        
+        print(data,"djskandkjasnkdasj")
+        
+        return JSONResponse(status_code=200, content={"status": True, "message":"Order Successfully","data": {
+            "order_id":order_id
+        }})
+    
+    
+    except Exception as e:
+        return JSONResponse(status_code=400, content={"status": False, "message":"Something went wrong "+str(e)})
+    
+    
+    
+    
+    
+    return ""
 @router.post("/category", status_code=200)
 @router.patch("/category/{cat_id}", status_code=200)
 async def category_creation_and_updation(request: Request,cat_id=None,category: Inventory.CategoryModel = Depends(Inventory.CategoryModel.as_form),category_image: UploadFile = File(None)):
     
     print("category called",request,category,cat_id)
-
+    
+    
+    
+    print(request.state.token,request.state.user_details,"requestrequestrequest")
 
     category_image_url = ""
     if(category_image):
@@ -48,6 +210,8 @@ async def category_list(request: Request):
     
     
     print(request.app)
+    print(request.state.token,request.state.user_details,"requestrequestrequest")
+
     sql_q = f"select uuid as id,category_name,category_image from category where status = TRUE"
     data = request.app.state.db.get_data_as_json(sql_q,())
     return JSONResponse(status_code=200, content={"status": True, "message":"Category Fetched Successfully","data": data})

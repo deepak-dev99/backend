@@ -37,9 +37,10 @@ auth_dependency = Depends(ccm.verify_token)
 
 
 app.include_router(inventory.router, prefix="/api/inventory", tags=["Inventory"],dependencies=[auth_dependency])   
-app.include_router(statistics.router, prefix="/api/statistics", tags=["statistics"])   
+app.include_router(statistics.router, prefix="/api/statistics", tags=["statistics"],dependencies=[auth_dependency])
 app.include_router(common.router, prefix="/common", tags=["common"])   
-app.include_router(customer.router, prefix="/api/customer", tags=["customer"])   
+app.include_router(customer.router, prefix="/api/customer", tags=["customer"],dependencies=[auth_dependency])
+app.include_router(busy_board.router, prefix="/api/busyboard", tags=["busyboard"],dependencies=[auth_dependency])
 
 
 app.include_router(auth.router, prefix="/api/auth", tags=["User"])

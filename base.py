@@ -9,15 +9,23 @@ import os
 from datetime import datetime, timedelta
 from jose import JWTError, jwt
 import traceback
+import uuid
 
 from pydantic import BaseModel, EmailStr
 from fastapi import Form
+
+from typing import List
+
+
+
 
 import json
 
 
 from typing import Optional
 
+
+from common.external_db import run_query
 
 
 
@@ -39,3 +47,4 @@ from routes import inventory
 from routes import statistics
 from routes import customer
 from routes import common
+from routes import busy_board
