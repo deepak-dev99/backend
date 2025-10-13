@@ -78,9 +78,17 @@ async def order_list(request: Request):
 SELECT
     o.id AS order_id,
     o.customer_id,
+    c.name AS customer_name,
+    c.email AS customer_email,
+    c.phone AS customer_mobile,
+
+    o.subcustomer_id,
+    sc.name AS subcustomer_name,
+    sc.email AS subcustomer_email,
+    sc.phone AS subcustomer_mobile,
+
     o.order_number,
     o.order_status,
-    o.subcustomer_id,
     o.delivery_name,
     o.email,
     o.mobile,
@@ -109,7 +117,12 @@ SELECT
     ) AS items
 FROM orders o
 JOIN order_items oi ON oi.order_id = o.id
-GROUP BY o.id
+LEFT JOIN customers c ON c.uuid = o.customer_id
+LEFT JOIN sub_customers sc ON sc.uuid = o.subcustomer_id
+GROUP BY
+    o.id,
+    c.id,
+    sc.id
 ORDER BY o.id;
 """
     data = request.app.state.db.get_data_as_json(sql_q,())
@@ -616,6 +629,7 @@ async def product_list_non_admin(request: Request,
         where_clause += " WHERE c.category_name = %s"
         params.append(category)
 
+    params.append(request.state.user_details["uuid"])
     sql_q = f"""
         
             SELECT 
@@ -654,7 +668,7 @@ async def product_list_non_admin(request: Request,
             SELECT DISTINCT ON (product_id)
                 product_id,
                 price::text
-            FROM public.product_prices WHERE customer_type = 'e8351b59-9b12-42c6-a554-28e8902d7c49'
+            FROM public.product_prices WHERE customer_type = %s
             ORDER BY product_id, id DESC
         ) AS ppr
             ON ppr.product_id = pd.uuid WHERE price is NOT NULL;

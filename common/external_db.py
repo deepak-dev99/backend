@@ -16,8 +16,8 @@ conn_str = (
     f'DATABASE={database};'
     f'UID={username};PWD={password};Encrypt=no;'
 )
-conn = pyodbc.connect(conn_str)
-cursor = conn.cursor()
+# conn = pyodbc.connect(conn_str)
+# cursor = conn.cursor()
 
 
 def run_query(stmt):
