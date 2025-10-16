@@ -130,6 +130,23 @@ ORDER BY o.id;
 
     return JSONResponse(status_code=200, content={"status": True, "message":"Order Successfully","data": data})
     
+@router.post("/update-order-status/{order_id}/{status}", status_code=200)
+async def update_order_status(request: Request, order_id, status):
+    
+    
+    status_list = {
+        "approved":2,
+        "declined":8
+    }
+    
+    sql = "UPDATE orders SET order_status = %s WHERE id = %s"
+    data = (status_list[status], order_id)
+    request.app.state.db.execute_update_query(sql,data)
+    return order_id
+    
+    
+    
+    
 @router.post("/place-order", status_code=200)
 async def place_order(request: Request,order: Inventory.OrderModel):
     

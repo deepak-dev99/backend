@@ -65,6 +65,12 @@ class CommonDB:
         return cur.fetchall()
         
         
+    def execute_query(self, sql_query, data=None):
+        cur = self.db_connect.cursor()
+        cur.execute(sql_query, data)
+        self.db_connect.commit()  # ✅ Commit changes to save updates
+        return cur.rowcount
+        
     def get_data_as_json(self, sql_query,data):
         cur = self.db_connect.cursor()
         cur.execute(sql_query,data)
