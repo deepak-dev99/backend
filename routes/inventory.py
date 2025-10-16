@@ -72,7 +72,11 @@ async def banner_delete(request: Request,banner_id):
 async def order_list(request: Request):
     
     
+    where_q=""
     
+    if(request.state.user_details["userType"]=="customer"):
+        uuid=request.state.user_details["uuid"]
+        where_q=f"WHERE c.uuid = '{uuid}'"
     
     sql_q = f"""
 SELECT
@@ -119,6 +123,7 @@ FROM orders o
 JOIN order_items oi ON oi.order_id = o.id
 LEFT JOIN customers c ON c.uuid = o.customer_id
 LEFT JOIN sub_customers sc ON sc.uuid = o.subcustomer_id
+{where_q}
 GROUP BY
     o.id,
     c.id,
@@ -129,7 +134,11 @@ ORDER BY o.id;
     
 
     return JSONResponse(status_code=200, content={"status": True, "message":"Order Successfully","data": data})
-    
+  
+  
+  
+  
+     
 @router.post("/update-order-status/{order_id}/{status}", status_code=200)
 async def update_order_status(request: Request, order_id, status):
     
