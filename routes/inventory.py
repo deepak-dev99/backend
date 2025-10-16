@@ -139,7 +139,7 @@ ORDER BY o.id;
   
   
      
-@router.post("/update-order-status/{order_id}/{status}", status_code=200)
+@router.patch("/update-order-status/{order_id}/{status}", status_code=200)
 async def update_order_status(request: Request, order_id, status):
     
     
