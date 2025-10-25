@@ -145,12 +145,12 @@ async def update_order_status(request: Request, order_id, status):
     
     status_list = {
         "approved":2,
-        "declined":8,
-        "declined":8,
-        "declined":8,
-        "declined":8,
-        "declined":8,
-        "declined":8
+        "packed":3,
+        "shipped":4,
+        "out_for_delivery":5,
+        "delivered":6,
+        "cancelled":8,
+        "out_of_stock":9
     }
     
     sql = "UPDATE orders SET order_status = %s WHERE id = %s"

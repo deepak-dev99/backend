@@ -139,6 +139,26 @@ class CommonDB:
 
 
 
+    def execute_update_query(self, sql_query, data=None):
+        """
+        Executes an UPDATE query and commits the transaction.
+        Returns a dictionary indicating success and number of rows affected.
+        Rolls back on error.
+        """
+        cur = self.db_connect.cursor()
+        try:
+            cur.execute(sql_query, data)
+            self.db_connect.commit()
+            affected_rows = cur.rowcount
+            cur.close()
+            return {"success": True, "rows_affected": affected_rows}
+        except Exception as e:
+            self.db_connect.rollback()
+            cur.close()
+            print(traceback.print_exc())
+            return {"success": False, "error": str(e)}
+
+
 
 
 def migrator_v2(db_connect):
