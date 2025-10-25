@@ -145,6 +145,11 @@ async def update_order_status(request: Request, order_id, status):
     
     status_list = {
         "approved":2,
+        "declined":8,
+        "declined":8,
+        "declined":8,
+        "declined":8,
+        "declined":8,
         "declined":8
     }
     
