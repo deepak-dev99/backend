@@ -11,7 +11,7 @@ router = APIRouter()
 
 @router.post("/banner", status_code=200)
 @router.patch("/banner/{banner_id}", status_code=200)
-async def banner_creation_and_updation(request: Request,banner_id=None, banner: Inventory.BannerModel = Depends(Inventory.CategoryModel.as_form),banner_image: UploadFile = File(None)):
+async def banner_creation_and_updation(request: Request,banner_id=None, banner: Inventory.BannerModel = Depends(Inventory.BannerModel.as_form),banner_image: UploadFile = File(None)):
     
     print("banner called",request,banner,banner_id)
 
@@ -29,20 +29,34 @@ async def banner_creation_and_updation(request: Request,banner_id=None, banner: 
             f.write(await banner_image.read())
             
 
+    if(banner_id):
+        
+        
+        sql = "UPDATE banner SET banner_image = %s WHERE uuid = %s"
+        dataval = (banner_image_url, banner_id)
+        data = request.app.state.db.execute_update_query(sql,dataval)
+        
+        
+        print(data,"asdfghjksdfghj")
+        if(data["success"]):
+            return JSONResponse(status_code=200, content={"status": True, "message":"Banner Successfully","data": data})
+        
+        else:    
+            return JSONResponse(status_code=400, content={"status": False, "message":"Something went wrong"})
     
-    sql_q = f"INSERT INTO banner (banner_name,banner_image) VALUES (%s,%s)"
-    data = request.app.state.db.save_data(sql_q,(banner.banner_name,banner_image_url))
-    
-    
-    print(data,"banner_namecategory_name")
-    
-    if(data["success"]):
-        return JSONResponse(status_code=200, content={"status": True, "message":"Banner Successfully","data": data})
-    
-    else:    
-        return JSONResponse(status_code=400, content={"status": False, "message":"Something went wrong"})
-    
+        
+    else:
+        
 
+        sql_q = f"INSERT INTO banner (banner_name,banner_image) VALUES (%s,%s)"
+        data = request.app.state.db.save_data(sql_q,(banner.banner_name,banner_image_url))
+        if(data["success"]):
+            return JSONResponse(status_code=200, content={"status": True, "message":"Banner Successfully","data": data})
+        
+        else:    
+            return JSONResponse(status_code=400, content={"status": False, "message":"Something went wrong"})
+    
+    
 
 @router.get("/banner", status_code=200)
 async def banner_list(request: Request):
@@ -56,7 +70,7 @@ async def banner_list(request: Request):
         
 
 
-@router.delete("/banner/{cat_id}", status_code=200)
+@router.delete("/banner/{banner_id}", status_code=200)
 async def banner_delete(request: Request,banner_id):
     
     
@@ -144,13 +158,15 @@ async def update_order_status(request: Request, order_id, status):
     
     
     status_list = {
+        "order_placed":2,
         "approved":2,
         "packed":3,
         "shipped":4,
         "out_for_delivery":5,
         "delivered":6,
         "cancelled":8,
-        "out_of_stock":9
+        "out_of_stock":9,
+        "approved_cancelled":10,
     }
     
     sql = "UPDATE orders SET order_status = %s WHERE id = %s"

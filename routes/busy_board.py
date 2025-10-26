@@ -195,41 +195,41 @@ FROM finalData;
     print("Start Admin_Dashboard_Cards ..................... 79")
     
     
-    start_v1 = datetime.now()
+    # start_v1 = datetime.now()
     
-    get_data = run_query(query_total)
+    # get_data = run_query(query_total)
     
-    start_v2 = datetime.now()
-    print(start_v2 - start_v1)
-    get_data_invoice = run_query(query_invoice)
-    start_v3 = datetime.now()
-    print(start_v3 - start_v1)
-    get_data_products = run_query(query_product)
+    # start_v2 = datetime.now()
+    # print(start_v2 - start_v1)
+    # get_data_invoice = run_query(query_invoice)
+    # start_v3 = datetime.now()
+    # print(start_v3 - start_v1)
+    # get_data_products = run_query(query_product)
     
-    start_v4 = datetime.now()
+    # start_v4 = datetime.now()
     
     
-    print(start_v4 - start_v1)
+    # print(start_v4 - start_v1)
     
-    if(len(get_data) > 0):
-        get_data = get_data[0]
+    # if(len(get_data) > 0):
+    #     get_data = get_data[0]
         
         
     
         
-    final_data = {
-        **get_data,
-        "TotalCustomer":len(get_customer_data),
-        "TotalInvoice":len(get_data_invoice),
-        "TotalProducts":len(get_data_products),
-    }
+    # final_data = {
+    #     **get_data,
+    #     "TotalCustomer":len(get_customer_data),
+    #     "TotalInvoice":len(get_data_invoice),
+    #     "TotalProducts":len(get_data_products),
+    # }
     
-    """
-      AND CAST(DueDate AS DATE) BETWEEN '2022-04-10' AND '2022-04-20'
-      """
+    # """
+    #   AND CAST(DueDate AS DATE) BETWEEN '2022-04-10' AND '2022-04-20'
+    #   """
       
       
-    print(get_customer_data,"get_customer_dataget_customer_data")
+    # print(get_customer_data,"get_customer_dataget_customer_data")
       
     return JSONResponse(status_code=200, content={"status": True, "message":"Admin Dashboard Successfully","data": final_data})
     

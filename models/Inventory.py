@@ -62,10 +62,10 @@ class BannerModel(BaseModel):
     @classmethod
     def as_form(
         cls,
-        category_name: str = Form(...)
+        banner_name: str = Form(...)
     ):
         return cls(
-            category_name=category_name 
+            banner_name=banner_name 
         )
 
 class BrandModel(BaseModel):
