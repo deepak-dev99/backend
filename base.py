@@ -6,13 +6,16 @@ from fastapi.responses import JSONResponse, FileResponse
 import psycopg2
 from dotenv import load_dotenv
 import os
+import socketio
+
 from datetime import datetime, timedelta
 from jose import JWTError, jwt
 import traceback
 import uuid
 import time
 from datetime import datetime
-
+from starlette.middleware import Middleware
+from starlette.applications import Starlette
 from pydantic import BaseModel, EmailStr
 from fastapi import Form
 
@@ -39,7 +42,7 @@ import common.custom_middleware as ccm
 
 
 
-
+from common.socket_server import socket_app, sio
 
 
 
