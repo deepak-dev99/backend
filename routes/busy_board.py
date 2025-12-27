@@ -63,12 +63,68 @@ WHERE
     t1.VchType = 9
     AND t2.RecType = 2
     AND t1.Cancelled = 0
-    AND m1.Name LIKE {request.state.PartyName}
+    AND m1.Name LIKE '{request.state.PartyName}'
 ORDER BY 
     t1.VchNo;
     """
     
+    
+    
+    
+    print(invoice_Sql,"invoice_Sqlinvoice_Sql")
+    
+    
+    
+    group_invoice_sql = f"""SELECT 
+    t2.VchNo,
+    MAX(t2.Date) AS Date,
+    m1.Name AS PartyName,
+    SUM(ABS(t2.Value1))  AS TotalQuantity_All,
+    SUM(ABS(t2.Value3))  AS TotalAmount_All,
+    SUM(CASE WHEN t2.RecType = 2 THEN ABS(t2.Value1) ELSE 0 END) AS TotalQuantity_Rec2,
+    SUM(CASE WHEN t2.RecType = 2 THEN ABS(t2.Value3) ELSE 0 END) AS TotalAmount_Rec2,
+    (
+        SELECT  
+            m2.Name      AS ItemName,
+            ABS(t22.Value1) AS Quantity,
+            ABS(t22.Value3) AS Amount,
+            t22.D2       AS Price,
+            t22.RecType
+        FROM Tran2 t22
+        LEFT JOIN Master1 m2 ON m2.Code = t22.MasterCode1
+        WHERE 
+            t22.VchNo = t2.VchNo
+        FOR JSON PATH
+    ) AS Items_All,
+    (
+        SELECT  
+            m3.Name       AS ItemName,
+            ABS(t33.Value1) AS Quantity,
+            ABS(t33.Value3) AS Amount,
+            t33.D2        AS Price
+        FROM Tran2 t33
+        LEFT JOIN Master1 m3 ON m3.Code = t33.MasterCode1
+        WHERE 
+            t33.VchNo = t2.VchNo
+            AND t33.RecType = 2
+        FOR JSON PATH
+    ) AS Items_Rec2
 
+FROM Tran2 t2
+LEFT JOIN Tran1 t1 ON t2.VchCode = t1.VchCode
+LEFT JOIN Master1 m1 ON m1.Code = t1.MasterCode1
+WHERE 
+    t1.VchType = 9
+    AND t1.Cancelled = 0
+    AND m1.Name LIKE '{request.state.PartyName}'
+GROUP BY 
+    t2.VchNo,
+    m1.Name
+ORDER BY 
+    t2.VchNo;
+"""
+
+    group_invoice_output = run_query(group_invoice_sql)
     invoice_output = run_query(invoice_Sql)
 
 
@@ -81,6 +137,8 @@ ORDER BY
     final_data = {
         "invoice_output_count":len(invoice_output),
         "invoice_output":invoice_output,
+        "group_invoice_output_count":len(group_invoice_output),
+        "group_invoice_output":group_invoice_output,
         "ledger_output_count":len(ledger_output),
         "ledger_output":ledger_output
     }
@@ -116,7 +174,7 @@ WHERE
     t1.VchType = 9
     AND t2.RecType = 2
     AND t1.Cancelled = 0
-    AND m1.Name LIKE {request.state.PartyName}
+    AND m1.Name LIKE '{request.state.PartyName}'
 ORDER BY 
     t1.VchNo;
     """
@@ -151,6 +209,7 @@ async def user_dashboard_ledger(request: Request):
         SELECT 
             m1.Name AS PartyName,
             m2.Name,
+            t2.Date,
             t1.VchNo,
             t1.VchAmtBaseCur,
             t2.ShortNar
@@ -204,7 +263,9 @@ SELECT
         SUM(t2.Value3) AS OrderedA,
         SUM(t3sum.TotalValue1) AS Pending,
         SUM(t3sum.TotalNewRefAmount) AS NewRefAmount,
-        SUM(t3sum.TotalValue3) AS PendingA
+        SUM(t3sum.TotalValue3) AS PendingA,
+        t2.Date
+        
 FROM Tran2 t2
 LEFT JOIN Tran1 t1 ON t1.VchCode = t2.VchCode
 LEFT JOIN Master1 m1 ON t2.CM1 = m1.Code
@@ -234,7 +295,8 @@ GROUP BY
     t1.VchCode,
     t2.VchNo,
     m1.Name,
-    m2.Name
+    m2.Name,
+    t2.Date
 ORDER BY 
     t1.VchNo;"""
     
@@ -605,6 +667,45 @@ async def user_order_vs_sale_month_wise(request: Request):
     
     
     
+    
+    
+@router.get("/quaterwise_target_vs_achievement", status_code=200)
+async def quaterwise_target_vs_achievement(request: Request):
+    
+    
+    
+    quaterwise_target_vs_achievement_Sql = f"""
+        SELECT 
+            YEAR(t1.Date) AS Year,
+            (DATEPART(QUARTER, t1.Date) - 1) AS Quarter,
+            ROUND(ABS(SUM(t1.Value3)), 0) AS TotalValue3,
+            ROUND(ABS(SUM(t1.Value1)), 0) AS TotalValue1
+        FROM Tran2 t1 
+        LEFT JOIN Tran1 t21
+            ON t21.VchNo = t1.VchNo
+        LEFT JOIN Master1 m1 
+            ON m1.Code = t21.MasterCode1
+        WHERE t1.VchType IN (3,9)
+        AND t1.RecType IN (2,7)
+        AND m1.Name LIKE '%{request.state.PartyName}%'
+        GROUP BY 
+            YEAR(t1.Date),
+            DATEPART(QUARTER, t1.Date)
+        ORDER BY 
+            Year,
+            Quarter;"""
+    quaterwise_target_vs_achievement_output = run_query(quaterwise_target_vs_achievement_Sql)
+    
+    
+    
+    
+        
+    
+      
+    return JSONResponse(status_code=200, content={"status": True, "message":" Dashboard Successfully","data": quaterwise_target_vs_achievement_output})
+    
+    
+    
 
 
 
@@ -710,47 +811,91 @@ async def Customer_Dashboard_Cards(request: Request):
     
     # btw_start_end = f"AND CAST(DueDate AS DATE) BETWEEN '{start}' AND '{end}'"
     btw_start_end = f""
-    query_total = f"""WITH finalData AS (
+#     query_total = f"""WITH finalData AS (
     
-SELECT 
-    m1.Name AS CustomerName,
-    Tran3.RefCode,
+# SELECT 
+#     m1.Name AS CustomerName,
+#     Tran3.RefCode,
     
-    SUM(Tran3.Value1) AS PendingQty,
-    SUM(CASE WHEN Tran3.Value1 > 0 THEN Tran3.Value1 ELSE 0 END) AS TotalQty,
-    (SUM(CASE WHEN Tran3.Value1 > 0 THEN Tran3.Value1 ELSE 0 END) - SUM(Tran3.Value1)) AS ClearedQty,
+#     SUM(Tran3.Value1) AS PendingQty,
+#     SUM(CASE WHEN Tran3.Value1 > 0 THEN Tran3.Value1 ELSE 0 END) AS TotalQty,
+#     (SUM(CASE WHEN Tran3.Value1 > 0 THEN Tran3.Value1 ELSE 0 END) - SUM(Tran3.Value1)) AS ClearedQty,
 
-    SUM(Tran3.NewRefAmount) AS PendingAmount,
-    SUM(CASE WHEN Tran3.Value1 > 0 THEN Tran3.NewRefAmount ELSE 0 END) AS TotalAmount,
-    (SUM(CASE WHEN Tran3.Value1 > 0 THEN Tran3.NewRefAmount ELSE 0 END) - SUM(Tran3.NewRefAmount)) AS ClearedAmount,
+#     SUM(Tran3.NewRefAmount) AS PendingAmount,
+#     SUM(CASE WHEN Tran3.Value1 > 0 THEN Tran3.NewRefAmount ELSE 0 END) AS TotalAmount,
+#     (SUM(CASE WHEN Tran3.Value1 > 0 THEN Tran3.NewRefAmount ELSE 0 END) - SUM(Tran3.NewRefAmount)) AS ClearedAmount,
 
-    MAX(Tran3.No) AS VoucherNo,
-    MIN(Tran3.Balance1) AS Balance1,
-    COUNT(*) AS LinesCount
-FROM Tran3
-LEFT JOIN Tran1 
-    ON Tran1.VchNo = Tran3.No
-LEFT JOIN Master1 m1
-    ON m1.Code = Tran1.MasterCode1
-WHERE 
-Tran3.VchType IN (12, 9) AND m1."Name" like 'AMBA E%'
-GROUP BY 
-    m1.Name,
-    Tran3.RefCode
-HAVING 
-    SUM(CASE WHEN Tran3.Value1 > 0 THEN Tran3.Value1 ELSE 0 END) > 0
-)
+#     MAX(Tran3.No) AS VoucherNo,
+#     MIN(Tran3.Balance1) AS Balance1,
+#     COUNT(*) AS LinesCount
+# FROM Tran3
+# LEFT JOIN Tran1 
+#     ON Tran1.VchNo = Tran3.No
+# LEFT JOIN Master1 m1
+#     ON m1.Code = Tran1.MasterCode1
+# WHERE 
+# Tran3.VchType IN (12, 9) AND m1."Name" like 'AMBA E%'
+# GROUP BY 
+#     m1.Name,
+#     Tran3.RefCode
+# HAVING 
+#     SUM(CASE WHEN Tran3.Value1 > 0 THEN Tran3.Value1 ELSE 0 END) > 0
+# )
 
-SELECT 
-    SUM(PendingQty) AS TotalPendingQty,
-    SUM(TotalQty) AS TotalTotalQty,
-    SUM(ClearedQty) AS TotalClearedQty,
-    SUM(PendingAmount) AS TotalPendingAmount,
-    SUM(TotalAmount) AS TotalTotalAmount,
-    SUM(ClearedAmount) AS TotalClearedAmount,
-    SUM(LinesCount) AS TotalLinesCount
-FROM finalData;
-"""
+# SELECT 
+#     SUM(PendingQty) AS TotalPendingQty,
+#     SUM(TotalQty) AS TotalTotalQty,
+#     SUM(ClearedQty) AS TotalClearedQty,
+#     SUM(PendingAmount) AS TotalPendingAmount,
+#     SUM(TotalAmount) AS TotalTotalAmount,
+#     SUM(ClearedAmount) AS TotalClearedAmount,
+#     SUM(LinesCount) AS TotalLinesCount
+# FROM finalData;
+# """
+
+    query_total = f"""
+        WITH finalData AS (
+            SELECT 
+                m1.Name AS CustomerName,
+                Tran3.RefCode,
+                
+                SUM(Tran3.Value1) AS PendingQty,
+                SUM(CASE WHEN Tran3.Value1 > 0 THEN Tran3.Value1 ELSE 0 END) AS TotalQty,
+                (SUM(CASE WHEN Tran3.Value1 > 0 THEN Tran3.Value1 ELSE 0 END) 
+                    - SUM(Tran3.Value1)) AS ClearedQty,
+
+                SUM(Tran3.NewRefAmount) AS PendingAmount,
+                SUM(CASE WHEN Tran3.Value1 > 0 THEN Tran3.NewRefAmount ELSE 0 END) AS TotalAmount,
+                (SUM(CASE WHEN Tran3.Value1 > 0 THEN Tran3.NewRefAmount ELSE 0 END) 
+                    - SUM(Tran3.NewRefAmount)) AS ClearedAmount,
+
+                MAX(Tran3.No) AS VoucherNo,
+                MIN(Tran3.Balance1) AS Balance1,
+                COUNT(*) AS LinesCount
+            FROM Tran3
+            LEFT JOIN Tran1 ON Tran1.VchNo = Tran3.No
+            LEFT JOIN Master1 m1 ON m1.Code = Tran1.MasterCode1
+            WHERE 
+                Tran3.VchType IN (12, 9)
+                AND m1.Name LIKE '{request.state.PartyName}'
+            GROUP BY 
+                m1.Name,
+                Tran3.RefCode
+            HAVING 
+                SUM(Tran3.Value1) > 0   -- ONLY show if Pending > 0
+        )
+
+        SELECT 
+            CustomerName,
+            SUM(PendingQty) AS PendingQty,
+            SUM(PendingAmount) AS PendingAmount,
+            SUM(TotalAmount) AS TotalAmount,
+            SUM(ClearedQty) AS ClearedQty,
+            SUM(ClearedAmount) AS ClearedAmount,
+            STRING_AGG(RefCode, ', ') AS RefCodes
+        FROM finalData
+        GROUP BY CustomerName;
+    """
 
 
 
@@ -820,7 +965,13 @@ FROM finalData;
       
     # print(get_customer_data,"get_customer_dataget_customer_data")
     
-    final_data = {}
+    
+    
+    query_credit_limit = f"""SELECT D1 FROM Master1 WHERE Name = '{request.state.PartyName}'"""
+    get_credit_limit = run_query(query_credit_limit)
+    
+    if(len(get_credit_limit) > 0):
+        final_data["credit_limit"] = get_credit_limit[0]["D1"]
       
     return JSONResponse(status_code=200, content={"status": True, "message":"Admin Dashboard Successfully","data": final_data})
     
