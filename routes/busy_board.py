@@ -179,6 +179,57 @@ ORDER BY
     t1.VchNo;
     """
     
+    
+    group_invoice_sql = f"""SELECT 
+    t2.VchNo,
+    MAX(t2.Date) AS Date,
+    m1.Name AS PartyName,
+    SUM(ABS(t2.Value1))  AS TotalQuantity_All,
+    SUM(ABS(t2.Value3))  AS TotalAmount_All,
+    SUM(CASE WHEN t2.RecType = 2 THEN ABS(t2.Value1) ELSE 0 END) AS TotalQuantity_Rec2,
+    SUM(CASE WHEN t2.RecType = 2 THEN ABS(t2.Value3) ELSE 0 END) AS TotalAmount_Rec2,
+    (
+        SELECT  
+            m2.Name      AS ItemName,
+            ABS(t22.Value1) AS Quantity,
+            ABS(t22.Value3) AS Amount,
+            t22.D2       AS Price,
+            t22.RecType
+        FROM Tran2 t22
+        LEFT JOIN Master1 m2 ON m2.Code = t22.MasterCode1
+        WHERE 
+            t22.VchNo = t2.VchNo
+        FOR JSON PATH
+    ) AS Items_All,
+    (
+        SELECT  
+            m3.Name       AS ItemName,
+            ABS(t33.Value1) AS Quantity,
+            ABS(t33.Value3) AS Amount,
+            t33.D2        AS Price
+        FROM Tran2 t33
+        LEFT JOIN Master1 m3 ON m3.Code = t33.MasterCode1
+        WHERE 
+            t33.VchNo = t2.VchNo
+            AND t33.RecType = 2
+        FOR JSON PATH
+    ) AS Items_Rec2
+
+FROM Tran2 t2
+LEFT JOIN Tran1 t1 ON t2.VchCode = t1.VchCode
+LEFT JOIN Master1 m1 ON m1.Code = t1.MasterCode1
+WHERE 
+    t1.VchType = 9
+    AND t1.Cancelled = 0
+    AND m1.Name LIKE '{request.state.PartyName}'
+GROUP BY 
+    t2.VchNo,
+    m1.Name
+ORDER BY 
+    t2.VchNo;
+"""
+
+    group_invoice_output = run_query(group_invoice_sql)
 
     invoice_output = run_query(invoice_Sql)
 
@@ -186,7 +237,9 @@ ORDER BY
     
     final_data = {
         "invoice_output_count":len(invoice_output),
-        "invoice_output":invoice_output
+        "invoice_output":invoice_output,
+        "group_invoice_output_count":len(group_invoice_output),
+        "group_invoice_output":group_invoice_output,
     }
     
     
@@ -196,39 +249,114 @@ ORDER BY
     
     
     
-
 @router.get("/user_dashboard_ledger", status_code=200)
 async def user_dashboard_ledger(request: Request):
     
     
     print(request.state.PartyName,"PartyNamePartyNamePartyNamePartyName")
     # CN_Sql = "SELECT VchNo from Tran1 WHERE VchType = 18;"
-
-
+    
     ledger_Sql = f"""
-        SELECT 
-            m1.Name AS PartyName,
-            m2.Name,
-            t2.Date,
-            t1.VchNo,
-            t1.VchAmtBaseCur,
-            t2.ShortNar
-        FROM Tran2 t2
-        LEFT JOIN Tran1 t1 
-            ON t2.VchCode = t1.VchCode
-        LEFT JOIN Master1 m1 
-            ON m1.Code = t1.MasterCode1 
-        LEFT JOIN Master1 m2 
-            ON m2.Code = t2.MasterCode1 
-        WHERE 
-            COALESCE(m1.Name, m2.Name) LIKE '{request.state.PartyName}'
-            AND t2.VchType IN (9,14) ORDER BY t2.VchCode;
 
-        """
+SELECT op.*,
+        t1."VchAmtBaseCur",
+        CASE WHEN t1."VchType" = 9 THEN ABS(t1."VchAmtBaseCur") ELSE 0 END AS Dr,
+        CASE WHEN t1."VchType" <> 9 THEN ABS(t1."VchAmtBaseCur") ELSE 0 END AS Cr,
 
+        SUM(
+            CASE 
+                WHEN t1."VchType" = 9 THEN -ABS(t1."VchAmtBaseCur")   -- Debit +
+                ELSE ABS(t1."VchAmtBaseCur")                        -- Credit −
+            END
+        ) OVER(
+            ORDER BY op."Date", op."VchNo"
+            ROWS UNBOUNDED PRECEDING
+        ) AS Balance
+FROM (
+    SELECT 
+        t2."Date",
+        t2."VchNo",
+        m2."Name" AS "Account",
+        m1."Name" AS Party1,
+        t1."VchType",
+        CASE 
+            WHEN t1."VchType" = 9 THEN 'Debit' 
+            ELSE 'Credit' 
+        END AS DrCr
+    FROM Tran2 t1
+    JOIN Tran2 t2
+        ON t1."VchNo" = t2."VchNo"  
+    JOIN Master1 m1
+        ON m1."Code" = t1."MasterCode1"
+    JOIN Master1 m2
+        ON m2."Code" = t2."MasterCode1"
+    WHERE t1."VchType" = 14 
+      AND t1."MasterCode1" <> t2."MasterCode1"
+      AND t1."SrNo" = 1 
+      AND m1."Name" = '{request.state.PartyName}'
+      AND t2."VchType" = 14 
+      AND t2."SrNo" = 2
+
+    UNION ALL
+
+    SELECT 
+        t1."Date",
+        t1."VchNo",
+        m2."Name" AS "Account",
+        m1."Name" AS Party1,
+        t1."VchType",
+        CASE 
+            WHEN t1."VchType" = 9 THEN 'Debit' 
+            ELSE 'Credit' 
+        END AS DrCr
+    FROM Tran2 t1
+    JOIN Tran2 t2
+        ON t1."VchNo" = t2."VchNo"  
+    JOIN Master1 m1
+        ON m1."Code" = t1."MasterCode1"
+    JOIN Master1 m2
+        ON m2."Code" = t2."MasterCode1"
+    WHERE 
+        t1."MasterCode1" <> t2."MasterCode1"
+        AND m1."Name" = '{request.state.PartyName}'
+        AND t2."VchType" = 9
+        AND t2."RecType" = 1
+        AND t1."RecType" = 1
+        AND t2."SrNo" = 2
+
+    UNION ALL
+
+    SELECT 
+        t2."Date",
+        t2."VchNo",
+        m2."Name" AS "Account",
+        m1."Name" AS Party1,
+        t1."VchType",
+        CASE 
+            WHEN t1."VchType" = 9 THEN 'Debit' 
+            ELSE 'Credit' 
+        END AS DrCr
+    FROM Tran2 t1
+    JOIN Tran2 t2
+        ON t1."VchNo" = t2."VchNo"  
+    JOIN Master1 m1
+        ON m1."Code" = t1."MasterCode1"
+    JOIN Master1 m2
+        ON m2."Code" = t2."MasterCode1"
+    WHERE t1."VchType" = 18
+      AND t1."MasterCode1" <> t2."MasterCode1"
+      AND t1."SrNo" = 1 
+      AND m1."Name" = '{request.state.PartyName}'
+      AND t2."SrNo" = 2
+) op JOIN Tran1 t1 ON t1."VchNo" = op.VchNo 
+ORDER BY op."Date" DESC;
+    
+    """
+    
 
     ledger_output = run_query(ledger_Sql)
-    
+
+
     
     final_data = {
         "ledger_output_count":len(ledger_output),
@@ -237,7 +365,122 @@ async def user_dashboard_ledger(request: Request):
     
     
     # print(final_data,"cnr_outputcnr_outputcnr_output")
+    return JSONResponse(status_code=200, content={"status": True, "message":"ledger Dashboard Successfully","data": final_data})
+    
+    
+    
+    
+
+@router.get("/one_user_details", status_code=200)
+async def one_user_details(request: Request):
+    
+    
+    one_user_details = f"""
+    SELECT 
+        m."Name" AS "Name",
+        a."Address1",
+        a."Address2",
+        a."Address3",
+        a."Address4",
+        a."Email",
+        a."Mobile",
+        a."ITPAN",
+        a."GSTNo",
+        a."PINCode",
+        a."Station",
+        a."Distance",
+        a."AccNo",
+        a."WhatsAppNo",
+        a."C4" AS "BankName",
+        a."C5" AS "BankACNo",
+        a."OF7" AS "CompanyTarget",
+        m1."Name"  AS "Region",
+        m2."Name"  AS "AreaManager",
+        m3."Name"  AS "SaleType",
+        m4."Name"  AS "DueDate",
+        m5."Name"  AS "SalesExecutive",
+        sm."Name" AS "Salesman",
+        m6."Name"  AS "PaymentType",
+        m7."Name"  AS "Country",
+        m8."Name"  AS "State",
+        m9."Name"  AS "City",
+        m10."Name"  AS "Region",
+        m11."Name"  AS "Area",
+        m12."Name"  AS "ContDept"
+    FROM "MasterAddressInfo" a
+    LEFT JOIN "Master1" m  ON m."Code" = a."MasterCode"
+    LEFT JOIN "Master1" m1  ON m1."Code" = a."OF1"
+    LEFT JOIN "Master1" m2  ON m2."Code" = a."OF2"
+    LEFT JOIN "Master1" m3  ON m3."Code" = a."OF3"
+    LEFT JOIN "Master1" m4  ON m4."Code" = a."OF4"
+    LEFT JOIN "Master1" m5  ON m5."Code" = a."OF5"
+    LEFT JOIN "Master1" m6  ON m6."Code" = a."OF6"
+    LEFT JOIN "Master1" m7  ON m7."Code" = a."CountryCodeLong"
+    LEFT JOIN "Master1" m8  ON m8."Code" = a."StateCodeLong"
+    LEFT JOIN "Master1" m9  ON m9."Code" = a."CityCodeLong"
+    LEFT JOIN "Master1" m10  ON m10."Code" = a."RegionCodeLong"
+    LEFT JOIN "Master1" m11  ON m11."Code" = a."AreaCodeLong"
+    LEFT JOIN "Master1" m12  ON m12."Code" = a."ContDeptCodeLong"
+    LEFT JOIN "Master1" sm  ON sm."Code" = m."CM3"
+
+    WHERE m."Name" like '{request.state.PartyName}';
+"""
+
+    
+    one_user_details_output = run_query(one_user_details)
+    
+    if(len(one_user_details_output) > 0):
+        one_user_details_output = one_user_details_output[0]
+    final_data = one_user_details_output
+    
+    
+    # print(final_data,"cnr_outputcnr_outputcnr_output")
     return JSONResponse(status_code=200, content={"status": True, "message":"user_dashboard_cn_cnr Dashboard Successfully","data": final_data})
+    
+    
+    
+
+# @router.get("/user_dashboard_ledger", status_code=200)
+# async def user_dashboard_ledger(request: Request):
+    
+    
+#     print(request.state.PartyName,"PartyNamePartyNamePartyNamePartyName")
+#     # CN_Sql = "SELECT VchNo from Tran1 WHERE VchType = 18;"
+
+
+#     ledger_Sql = f"""
+#         SELECT 
+#             m1.Name AS PartyName,
+#             m2.Name,
+#             t2.Date,
+#             t1.VchNo,
+#             t1.VchAmtBaseCur,
+#             t2.ShortNar
+#         FROM Tran2 t2
+#         LEFT JOIN Tran1 t1 
+#             ON t2.VchCode = t1.VchCode
+#         LEFT JOIN Master1 m1 
+#             ON m1.Code = t1.MasterCode1 
+#         LEFT JOIN Master1 m2 
+#             ON m2.Code = t2.MasterCode1 
+#         WHERE 
+#             COALESCE(m1.Name, m2.Name) LIKE '{request.state.PartyName}'
+#             AND t2.VchType IN (9,14) ORDER BY t2.VchCode;
+
+#         """
+
+
+#     ledger_output = run_query(ledger_Sql)
+    
+    
+#     final_data = {
+#         "ledger_output_count":len(ledger_output),
+#         "ledger_output":ledger_output
+#     }
+    
+    
+#     # print(final_data,"cnr_outputcnr_outputcnr_output")
+#     return JSONResponse(status_code=200, content={"status": True, "message":"user_dashboard_cn_cnr Dashboard Successfully","data": final_data})
     
     
     
@@ -327,45 +570,79 @@ async def pending_records(request: Request):
     print(request.state.PartyName,"PartyNamePartyNamePartyNamePartyName")
     # CN_Sql = "SELECT VchNo from Tran1 WHERE VchType = 18;"
     
-    pending_records_Sql = f"""SELECT 
-        t1.VchCode,
-        t1.VchNo AS ParentVchNo,
-        t2.VchNo AS ChildVchNo,
-        m1.Name AS CM1Name,
-        m2.Name AS MasterName,
-        (SUM(t2.Value1) - SUM(t3sum.TotalValue1)) AS Cleared,
-        SUM(t2.Value1) AS Ordered,
-        SUM(t3sum.TotalValue1) AS Pending,
-        SUM(t3sum.TotalValue3) AS PendingA
-FROM Tran1 t1
-JOIN Tran2 t2 ON t1.VchCode = t2.VchCode
-LEFT JOIN Master1 m1 ON t2.CM1 = m1.Code
-LEFT JOIN Master1 m2 ON t2.MasterCode1 = m2.Code
-LEFT JOIN (
+#     pending_records_Sql = f"""SELECT 
+#         t1.VchCode,
+#         t1.VchNo AS ParentVchNo,
+#         t2.VchNo AS ChildVchNo,
+#         m1.Name AS CM1Name,
+#         m2.Name AS MasterName,
+#         (SUM(t2.Value1) - SUM(t3sum.TotalValue1)) AS Cleared,
+#         SUM(t2.Value1) AS Ordered,
+#         SUM(t3sum.TotalValue1) AS Pending,
+#         SUM(t3sum.TotalValue3) AS PendingA
+# FROM Tran1 t1
+# JOIN Tran2 t2 ON t1.VchCode = t2.VchCode
+# LEFT JOIN Master1 m1 ON t2.CM1 = m1.Code
+# LEFT JOIN Master1 m2 ON t2.MasterCode1 = m2.Code
+# LEFT JOIN (
+#         SELECT 
+#             MasterCode1,
+#             SUM(Value1) AS TotalValue1,
+#             SUM(Value3) AS TotalValue3,
+#             No
+#         FROM Tran3
+#         GROUP BY MasterCode1, No
+# ) t3sum 
+#     ON t2.MasterCode1 = t3sum.MasterCode1 
+#    AND t2.VchNo = t3sum.No
+# WHERE 
+#     t2.RecType = 4
+#     AND t2.VchType = 12
+#     AND m1.Name LIKE '{request.state.PartyName}'
+# GROUP BY 
+#     t1.VchNo,
+#     t1.VchCode,
+#     t2.VchNo,
+#     m1.Name,
+#     m2.Name
+# HAVING 
+#     SUM(t3sum.TotalValue1) <> 0
+# ORDER BY 
+#     t1.VchNo;"""
+
+    pending_records_Sql = f"""
+
+SELECT 
+        t2."Date" as Date,
+        m1."Name" as ClientName,
+        m2."Name" as Item,
+        t2.d1 As TotalQty,
+        t2.d1 * t2.d6 AS TotalAmt,
+        t2.d1 - agg.TotalValue1 AS ClearedQty,
+        (t2.d1 - agg.TotalValue1) * t2.d6 ClearedAmt,
+        agg.TotalValue1 as PendingQty,
+        agg.TotalValue1 * t2.d6 AS PendingAmt,
+        t2.VchNo,
+        t2."CM1",
+        t2."VchCode",
+        t2."MasterCode1"
+    FROM Tran2 t2
+    JOIN Master1 m1 ON m1."Code" = t2."CM1"
+    JOIN Master1 m2 ON m2."Code" = t2."MasterCode1"
+    LEFT JOIN (
         SELECT 
-            MasterCode1,
-            SUM(Value1) AS TotalValue1,
-            SUM(Value3) AS TotalValue3,
-            No
+            [No],
+            [MasterCode1],
+            SUM([Value1]) AS TotalValue1
         FROM Tran3
-        GROUP BY MasterCode1, No
-) t3sum 
-    ON t2.MasterCode1 = t3sum.MasterCode1 
-   AND t2.VchNo = t3sum.No
-WHERE 
-    t2.RecType = 4
-    AND t2.VchType = 12
-    AND m1.Name LIKE '{request.state.PartyName}'
-GROUP BY 
-    t1.VchNo,
-    t1.VchCode,
-    t2.VchNo,
-    m1.Name,
-    m2.Name
-HAVING 
-    SUM(t3sum.TotalValue1) <> 0
-ORDER BY 
-    t1.VchNo;"""
+        GROUP BY [No],[MasterCode1]
+    ) agg 
+        ON agg.[No] = t2.[VchNo]
+       AND agg.[MasterCode1] = t2.[MasterCode1]
+    WHERE 
+        t2.[RecType] IN (4,3) 
+        AND agg.TotalValue1 > 0 
+        and m1."Name" LIKE '{request.state.PartyName}'"""
     
 
     pending_records_output = run_query(pending_records_Sql)
@@ -389,7 +666,50 @@ ORDER BY
     
     
     
+    
+    
+    
 
+
+    
+@router.get("/admin_dashboard_pending_all", status_code=200)
+async def admin_dashboard_cn_cnr(request: Request):
+    
+    CN_Sql = """
+    SELECT 
+m1."Name",
+M2."Name",
+T2.Date,
+T2."VchNo",
+T2."d6",
+T2."d1",
+T2."d6" * T2."d1"
+FROM Tran2 t2
+JOIN Master1 m1 ON m1.[Code] = t2.[CM1]
+JOIN Master1 m2 ON m2.[Code] = t2.[MasterCode1]
+LEFT JOIN (
+        SELECT 
+            [No],
+            [MasterCode1],
+            SUM([Value1]) AS TotalValue1
+        FROM Tran3
+        GROUP BY [No],[MasterCode1]
+) agg 
+    ON agg.[No] = t2.[VchNo]
+   AND agg.[MasterCode1] = t2.[MasterCode1]
+WHERE 
+    t2.[RecType] IN (4,3)
+    AND agg.TotalValue1 > 0
+    ORDER BY Date DESC;"""
+    
+    
+    
+    cnr_output = run_query(CN_Sql)
+    
+    
+    
+    return cnr_output
+    
     
 @router.get("/admin_dashboard_cn_cnr", status_code=200)
 async def admin_dashboard_cn_cnr(request: Request):
@@ -577,19 +897,44 @@ FROM T1, T2, T3, T4;"""
     cleared_amount_output = run_query(cleared_amount_Sql)
     if(len(cleared_amount_output) > 0):
         cleared_amount_output = cleared_amount_output[0]
+        
+        
+        
+    pending_amount_Sql = f"""SELECT  
+    SUM(agg.TotalValue1) AS TotalPendingQty,
+    SUM(agg.TotalValue1 * t2.d6) AS TotalPendingAmt
+FROM Tran2 t2
+LEFT JOIN (
+    SELECT 
+        [No],
+        [MasterCode1],
+        SUM([Value1]) AS TotalValue1
+    FROM Tran3
+    GROUP BY [No],[MasterCode1]
+) agg 
+    ON agg.[No] = t2.[VchNo]
+   AND agg.[MasterCode1] = t2.[MasterCode1]
+WHERE 
+    t2.[RecType] IN (4,3) 
+    AND agg.TotalValue1 > 0;
+    """
+    pending_amount_output = run_query(pending_amount_Sql)
+    if(len(pending_amount_output) > 0):
+        pending_amount_output = pending_amount_output[0]
     
     
         
     final_data = {
         **order_amount_output,
         **cleared_amount_output,
+        **pending_amount_output,
         "TotalCustomer":len(get_customer_data),
         "TotalInvoice":len(get_data_invoice),
         "TotalProducts":len(get_data_products),
         "TotalCNR":len(cnr_output),
         "TotalCN":len(cn_output),
         "TotalOrder":len(order_output),
-        "request.state.PartyName":request.state.PartyName
+        "PartyName":request.state.PartyName
     }
     
     """
@@ -714,22 +1059,26 @@ async def region_wise_sales(request: Request):
     
     
     
-    order_vs_sale_month_wise_Sql = f"""SELECT 
-        YEAR(t1.Date) AS Year,
-        MONTH(t1.Date) AS Month,
-        ROUND(ABS(SUM(t1.Value3)), 0) AS TotalValue3,
-        ROUND(ABS(SUM(t1.Value1)), 0) AS TotalValue1
+    region_wise_Sql = f"""SELECT 
+    m."Name",
+    ROUND(ABS(SUM(t1.Value3)), 0) AS TotalValue3,
+    ROUND(ABS(SUM(t1.Value1)), 0) AS TotalValue1
     FROM Tran2 t1
+    JOIN "MasterAddressInfo" ma ON
+    ma."MasterCode" = t1."CM1"
+    LEFT JOIN "Master1" m on 
+    m."Code" = ma.OF1
+
     WHERE t1.VchType IN (3,9)
+    AND m."Name" IN ('East','West','South','North')
     AND t1.RecType IN (2,7)
-    GROUP BY YEAR(t1.Date), MONTH(t1.Date)
-    ORDER BY Year, Month;"""
-    order_vs_sale_month_wise_output = run_query(order_vs_sale_month_wise_Sql)
+    GROUP BY m."Name";"""
+    region_wise_output = run_query(region_wise_Sql)
     
     
     
 
-    return JSONResponse(status_code=200, content={"status": True, "message":"Admin Dashboard Successfully","data": order_vs_sale_month_wise_output})
+    return JSONResponse(status_code=200, content={"status": True, "message":"Region Dashboard Successfully","data": region_wise_output})
     
     
     
