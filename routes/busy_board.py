@@ -15,13 +15,13 @@ async def user_dashboard_cn_cnr(request: Request):
     
     print(request.state.PartyName,"PartyNamePartyNamePartyNamePartyName")
     # CN_Sql = "SELECT VchNo from Tran1 WHERE VchType = 18;"
-    CN_Sql = f"SELECT * from Tran1 t1 LEFT JOIN Master1 m1 on m1.Code = t1.MasterCode1 WHERE m1.Name = '{request.state.PartyName}' AND VchType = 18;"
+    CN_Sql = f"SELECT * from Tran1 t1 LEFT JOIN Master1 m1 on m1.Code = t1.MasterCode1 WHERE m1.Name = '{request.state.PartyName}' AND VchType = 18 order by Date DESC;"
     
 
     cn_output = run_query(CN_Sql)
 
 
-    CNR_Sql = f"SELECT * from Tran1 t1 LEFT JOIN Master1 m1 on m1.Code = t1.MasterCode1 WHERE m1.Name = '{request.state.PartyName}' AND VchType = 3;"
+    CNR_Sql = f"SELECT * from Tran1 t1 LEFT JOIN Master1 m1 on m1.Code = t1.MasterCode1 WHERE m1.Name = '{request.state.PartyName}' AND VchType = 3 order by Date DESC;"
 
 
     cnr_output = run_query(CNR_Sql)
@@ -256,59 +256,181 @@ async def user_dashboard_ledger(request: Request):
     print(request.state.PartyName,"PartyNamePartyNamePartyNamePartyName")
     # CN_Sql = "SELECT VchNo from Tran1 WHERE VchType = 18;"
     
-    ledger_Sql = f"""
+#     ledger_Sql = f"""
 
-SELECT op.*,
-        t1."VchAmtBaseCur",
-        CASE WHEN t1."VchType" = 9 THEN ABS(t1."VchAmtBaseCur") ELSE 0 END AS Dr,
-        CASE WHEN t1."VchType" <> 9 THEN ABS(t1."VchAmtBaseCur") ELSE 0 END AS Cr,
+# SELECT op.*,
+#         t1."VchAmtBaseCur",
+#         CASE WHEN t1."VchType" = 9 THEN ABS(t1."VchAmtBaseCur") ELSE 0 END AS Dr,
+#         CASE WHEN t1."VchType" <> 9 THEN ABS(t1."VchAmtBaseCur") ELSE 0 END AS Cr,
 
-        SUM(
-            CASE 
-                WHEN t1."VchType" = 9 THEN -ABS(t1."VchAmtBaseCur")   -- Debit +
-                ELSE ABS(t1."VchAmtBaseCur")                        -- Credit −
-            END
-        ) OVER(
-            ORDER BY op."Date", op."VchNo"
-            ROWS UNBOUNDED PRECEDING
-        ) AS Balance
-FROM (
-    SELECT 
-        t2."Date",
-        t2."VchNo",
-        m2."Name" AS "Account",
-        m1."Name" AS Party1,
-        t1."VchType",
-        CASE 
-            WHEN t1."VchType" = 9 THEN 'Debit' 
-            ELSE 'Credit' 
-        END AS DrCr
-    FROM Tran2 t1
-    JOIN Tran2 t2
-        ON t1."VchNo" = t2."VchNo"  
-    JOIN Master1 m1
-        ON m1."Code" = t1."MasterCode1"
-    JOIN Master1 m2
-        ON m2."Code" = t2."MasterCode1"
-    WHERE t1."VchType" = 14 
-      AND t1."MasterCode1" <> t2."MasterCode1"
-      AND t1."SrNo" = 1 
-      AND m1."Name" = '{request.state.PartyName}'
-      AND t2."VchType" = 14 
-      AND t2."SrNo" = 2
+#         SUM(
+#             CASE 
+#                 WHEN t1."VchType" = 9 THEN -ABS(t1."VchAmtBaseCur")   -- Debit +
+#                 ELSE ABS(t1."VchAmtBaseCur")                        -- Credit −
+#             END
+#         ) OVER(
+#             ORDER BY op."Date", op."VchNo"
+#             ROWS UNBOUNDED PRECEDING
+#         ) AS Balance
+# FROM (
+#     SELECT 
+#         t2."Date",
+#         t2."VchNo",
+#         m2."Name" AS "Account",
+#         m1."Name" AS Party1,
+#         t1."VchType",
+#         CASE 
+#             WHEN t1."VchType" = 9 THEN 'Debit' 
+#             ELSE 'Credit' 
+#         END AS DrCr
+#     FROM Tran2 t1
+#     JOIN Tran2 t2
+#         ON t1."VchNo" = t2."VchNo"  
+#     JOIN Master1 m1
+#         ON m1."Code" = t1."MasterCode1"
+#     JOIN Master1 m2
+#         ON m2."Code" = t2."MasterCode1"
+#     WHERE t1."VchType" = 14 
+#       AND t1."MasterCode1" <> t2."MasterCode1"
+#       AND t1."SrNo" = 1 
+#       AND m1."Name" = '{request.state.PartyName}'
+#       AND t2."VchType" = 14 
+#       AND t2."SrNo" = 2
 
-    UNION ALL
+#     UNION ALL
 
-    SELECT 
+#     SELECT 
+#         t1."Date",
+#         t1."VchNo",
+#         m2."Name" AS "Account",
+#         m1."Name" AS Party1,
+#         t1."VchType",
+#         CASE 
+#             WHEN t1."VchType" = 9 THEN 'Debit' 
+#             ELSE 'Credit' 
+#         END AS DrCr
+#     FROM Tran2 t1
+#     JOIN Tran2 t2
+#         ON t1."VchNo" = t2."VchNo"  
+#     JOIN Master1 m1
+#         ON m1."Code" = t1."MasterCode1"
+#     JOIN Master1 m2
+#         ON m2."Code" = t2."MasterCode1"
+#     WHERE 
+#         t1."MasterCode1" <> t2."MasterCode1"
+#         AND m1."Name" = '{request.state.PartyName}'
+#         AND t2."VchType" = 9
+#         AND t2."RecType" = 1
+#         AND t1."RecType" = 1
+#         AND t2."SrNo" = 2
+
+#     UNION ALL
+
+#     SELECT 
+#         t2."Date",
+#         t2."VchNo",
+#         m2."Name" AS "Account",
+#         m1."Name" AS Party1,
+#         t1."VchType",
+#         CASE 
+#             WHEN t1."VchType" = 9 THEN 'Debit' 
+#             ELSE 'Credit' 
+#         END AS DrCr
+#     FROM Tran2 t1
+#     JOIN Tran2 t2
+#         ON t1."VchNo" = t2."VchNo"  
+#     JOIN Master1 m1
+#         ON m1."Code" = t1."MasterCode1"
+#     JOIN Master1 m2
+#         ON m2."Code" = t2."MasterCode1"
+#     WHERE t1."VchType" = 18
+#       AND t1."MasterCode1" <> t2."MasterCode1"
+#       AND t1."SrNo" = 1 
+#       AND m1."Name" = '{request.state.PartyName}'
+#       AND t2."SrNo" = 2
+      
+      
+#       UNION ALL
+
+# SELECT 
+#     t2."Date",
+#     t2."VchNo",
+#     m2."Name" AS "Account",
+#     m1."Name" AS Party1,
+#     t1."VchType",
+#     CASE 
+#         WHEN t1."VchType" = 9 THEN 'Debit'
+#         ELSE 'Credit'
+#     END AS DrCr
+# FROM Tran2 t1
+# JOIN Tran2 t2
+#     ON t1."VchNo" = t2."VchNo"
+# JOIN Master1 m1
+#     ON m1."Code" = t1."MasterCode1"
+# JOIN Master1 m2
+#     ON m2."Code" = t2."MasterCode1"
+# WHERE t1."VchType" = 16
+#   AND t1."MasterCode1" <> t2."MasterCode1"
+#   AND t1."SrNo" = 1
+#   AND m1."Name" = '{request.state.PartyName}'
+#   AND t2."SrNo" = 2
+
+#     UNION ALL
+
+#     SELECT 
+#         t2."Date",
+#         t2."VchNo",
+#         m2."Name" AS "Account",
+#         m1."Name" AS Party1,
+#         t1."VchType",
+#         CASE 
+#             WHEN t1."VchType" = 9 THEN 'Debit' 
+#             ELSE 'Credit' 
+#         END AS DrCr
+#     FROM Tran2 t1
+#     JOIN Tran2 t2
+#         ON t1."VchNo" = t2."VchNo"  
+#     JOIN Master1 m1
+#         ON m1."Code" = t1."MasterCode1"
+#     JOIN Master1 m2
+#         ON m2."Code" = t2."MasterCode1"
+#     WHERE t1."VchType" = 17
+#       AND t1."MasterCode1" <> t2."MasterCode1"
+#       AND t1."SrNo" = 1 
+#       AND m1."Name" = '{request.state.PartyName}'
+#       AND t2."SrNo" = 2
+# ) op JOIN Tran1 t1 ON t1."VchNo" = op.VchNo 
+# where t1."VchType" in (9,16,14,17,18)
+# ORDER BY op."Date" DESC, t1."VchType" ASC;
+    
+#     """
+
+
+
+    ledger_Sql = f"""select * from (SELECT 
         t1."Date",
         t1."VchNo",
         m2."Name" AS "Account",
         m1."Name" AS Party1,
         t1."VchType",
+        t1."Value1",
+        
+        t1."ShortNar",
+        
         CASE 
-            WHEN t1."VchType" = 9 THEN 'Debit' 
-            ELSE 'Credit' 
-        END AS DrCr
+            WHEN t1."Value1" >= 0 THEN ABS(t1."Value1")
+            ELSE 0
+            END AS Cr,
+
+            CASE 
+            WHEN t1."Value1" < 0 THEN ABS(t1."Value1")
+            ELSE 0
+            END AS Dr,
+
+            CASE 
+            WHEN t1."Value1" >= 0 THEN 'Credit'
+            ELSE 'Debit'
+            END AS DrCr
     FROM Tran2 t1
     JOIN Tran2 t2
         ON t1."VchNo" = t2."VchNo"  
@@ -318,40 +440,11 @@ FROM (
         ON m2."Code" = t2."MasterCode1"
     WHERE 
         t1."MasterCode1" <> t2."MasterCode1"
-        AND m1."Name" = '{request.state.PartyName}'
-        AND t2."VchType" = 9
+      AND m1."Name" like '{request.state.PartyName}'
+        AND t2."VchType" IN (3, 9,14,17,18)
         AND t2."RecType" = 1
         AND t1."RecType" = 1
-        AND t2."SrNo" = 2
-
-    UNION ALL
-
-    SELECT 
-        t2."Date",
-        t2."VchNo",
-        m2."Name" AS "Account",
-        m1."Name" AS Party1,
-        t1."VchType",
-        CASE 
-            WHEN t1."VchType" = 9 THEN 'Debit' 
-            ELSE 'Credit' 
-        END AS DrCr
-    FROM Tran2 t1
-    JOIN Tran2 t2
-        ON t1."VchNo" = t2."VchNo"  
-    JOIN Master1 m1
-        ON m1."Code" = t1."MasterCode1"
-    JOIN Master1 m2
-        ON m2."Code" = t2."MasterCode1"
-    WHERE t1."VchType" = 18
-      AND t1."MasterCode1" <> t2."MasterCode1"
-      AND t1."SrNo" = 1 
-      AND m1."Name" = '{request.state.PartyName}'
-      AND t2."SrNo" = 2
-) op JOIN Tran1 t1 ON t1."VchNo" = op.VchNo 
-ORDER BY op."Date" DESC;
-    
-    """
+        AND t2."SrNo" = 2) as data ORDER BY Date ASC, "VchType" ASC , "VchNo" ASC;"""
     
 
     ledger_output = run_query(ledger_Sql)
@@ -374,6 +467,14 @@ ORDER BY op."Date" DESC;
 @router.get("/one_user_details", status_code=200)
 async def one_user_details(request: Request):
     
+    open_bal_sql = f"""SELECT * FROM Folio1 f1 JOIN "Master1" m1 on m1."Code" = f1."MasterCode" where m1."Name" like '{request.state.PartyName}';"""
+    
+    open_bal = run_query(open_bal_sql)
+    
+    
+    if(len(open_bal)>0):
+        
+        open_bal = open_bal[0]
     
     one_user_details = f"""
     SELECT 
@@ -431,7 +532,7 @@ async def one_user_details(request: Request):
     
     if(len(one_user_details_output) > 0):
         one_user_details_output = one_user_details_output[0]
-    final_data = one_user_details_output
+    final_data = {**one_user_details_output,**open_bal}
     
     
     # print(final_data,"cnr_outputcnr_outputcnr_output")
@@ -642,7 +743,9 @@ SELECT
     WHERE 
         t2.[RecType] IN (4,3) 
         AND agg.TotalValue1 > 0 
-        and m1."Name" LIKE '{request.state.PartyName}'"""
+        and m1."Name" LIKE '{request.state.PartyName}'
+        order by Date DESC;
+        """
     
 
     pending_records_output = run_query(pending_records_Sql)
