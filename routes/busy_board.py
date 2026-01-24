@@ -63,7 +63,7 @@ WHERE
     t1.VchType = 9
     AND t2.RecType = 2
     AND t1.Cancelled = 0
-    AND m1.Name LIKE '{request.state.PartyName}'
+    AND m1.Name = '{request.state.PartyName}'
 ORDER BY 
     t1.VchNo;
     """
@@ -116,7 +116,7 @@ LEFT JOIN Master1 m1 ON m1.Code = t1.MasterCode1
 WHERE 
     t1.VchType = 9
     AND t1.Cancelled = 0
-    AND m1.Name LIKE '{request.state.PartyName}'
+    AND m1.Name = '{request.state.PartyName}'
 GROUP BY 
     t2.VchNo,
     m1.Name
@@ -185,7 +185,7 @@ WHERE
     t1.VchType = 9
     AND t2.RecType = 2
     AND t1.Cancelled = 0
-    AND m1.Name LIKE '{request.state.PartyName}'
+    AND m1.Name = '{request.state.PartyName}'
 ORDER BY 
     t1.VchNo;
     """
@@ -232,7 +232,7 @@ LEFT JOIN Master1 m1 ON m1.Code = t1.MasterCode1
 WHERE 
     t1.VchType = 9
     AND t1.Cancelled = 0
-    AND m1.Name LIKE '{request.state.PartyName}'
+    AND m1.Name = '{request.state.PartyName}'
 GROUP BY 
     t2.VchNo,
     m1.Name
@@ -469,18 +469,18 @@ SELECT
     t2a."VchType",
     
     CASE 
-    WHEN t2a."VchType" <> 9 THEN ABS(t2a."Value1")
+    WHEN t2a."VchType" NOT IN (9,17) THEN ABS(t2a."Value1")
     ELSE 0
     END AS Cr,
 
     CASE 
-    WHEN t2a."VchType" = 9 THEN ABS(t2a."Value1")
+    WHEN t2a."VchType" IN (9,17) THEN ABS(t2a."Value1")
     ELSE 0
     END AS Dr,
 
     CASE 
-    WHEN t2a."VchType" <> 9 THEN 'Credit'
-    ELSE 'Debit'
+    WHEN t2a."VchType" IN (9,17) THEN 'Debit'
+    ELSE 'Credit'
     END AS DrCr,
     t2a."MasterCode1" AS DebitCode,
     m1a."Name"       AS Party1,
@@ -499,13 +499,20 @@ JOIN "Master1" m1a
 JOIN "Master1" m1b
     ON m1b."Code" = t2b."MasterCode1"
 WHERE (
-    t2a."VchType" IN (14,16)
+    
+    t2a."VchType" IN (14)
+    OR 
+    (t2a."VchType" IN (16) AND t2b."SrNo" = 1)
     OR 
     (t2a."VchType" IN (2) AND t2b."SrNo" = 2 AND t2b."RecType" = 1)
     OR 
     (t2a."VchType" IN (9) AND t2b."SrNo" = 2 AND t2b."RecType" = 1)
     OR 
+    (t2a."VchType" IN (3) AND t2b."SrNo" = 2 AND t2b."RecType" = 1)
+    OR 
     (t2a."VchType" IN (18) AND t2b."SrNo" = 2)
+    OR 
+    (t2a."VchType" IN (17) AND t2b."SrNo" = 2)
 )
   AND m1a."Name" = '{request.state.PartyName}'
   AND t2a."MasterCode1" <> t2b."MasterCode1"
@@ -531,7 +538,7 @@ WHERE (
 @router.get("/one_user_details", status_code=200)
 async def one_user_details(request: Request):
     
-    open_bal_sql = f"""SELECT * FROM Folio1 f1 JOIN "Master1" m1 on m1."Code" = f1."MasterCode" where m1."Name" like '{request.state.PartyName}';"""
+    open_bal_sql = f"""SELECT * FROM Folio1 f1 JOIN "Master1" m1 on m1."Code" = f1."MasterCode" where m1."Name" = '{request.state.PartyName}';"""
     
     open_bal = run_query(open_bal_sql)
     
@@ -539,6 +546,9 @@ async def one_user_details(request: Request):
     if(len(open_bal)>0):
         
         open_bal = open_bal[0]
+    
+    else:
+        open_bal = {}
     
     one_user_details = f"""
     SELECT 
@@ -588,7 +598,7 @@ async def one_user_details(request: Request):
     LEFT JOIN "Master1" m12  ON m12."Code" = a."ContDeptCodeLong"
     LEFT JOIN "Master1" sm  ON sm."Code" = m."CM3"
 
-    WHERE m."Name" like '{request.state.PartyName}';
+    WHERE m."Name" = '{request.state.PartyName}';
 """
 
     
@@ -596,6 +606,11 @@ async def one_user_details(request: Request):
     
     if(len(one_user_details_output) > 0):
         one_user_details_output = one_user_details_output[0]
+    else:
+        one_user_details_output = {}
+        
+        
+    print(one_user_details_output,"one_user_details_outputone_user_details_output")
     final_data = {**one_user_details_output,**open_bal}
     
     
@@ -697,7 +712,7 @@ LEFT JOIN (
 WHERE 
     t2.RecType = 4
     AND t2.VchType = 12
-    AND m1.Name LIKE '{request.state.PartyName}'
+    AND m1.Name = '{request.state.PartyName}'
 GROUP BY 
     t1.VchNo,
     t1.VchCode,
@@ -807,7 +822,7 @@ SELECT
     WHERE 
         t2.[RecType] IN (4,3) 
         AND agg.TotalValue1 > 0 
-        and m1."Name" LIKE '{request.state.PartyName}'
+        and m1."Name" = '{request.state.PartyName}'
         order by Date DESC;
         """
     
@@ -1055,6 +1070,9 @@ FROM T1, T2, T3, T4;"""
     if(len(order_amount_output) > 0):
         order_amount_output = order_amount_output[0]
         
+    else:
+        order_amount_output = {}
+        
         
         
     cleared_amount_Sql = f"""SELECT ABS(SUM(Value3)) AS TotalClearedAmount,SUM(Value1) AS TotalClearedQuantity
@@ -1064,6 +1082,10 @@ FROM T1, T2, T3, T4;"""
     cleared_amount_output = run_query(cleared_amount_Sql)
     if(len(cleared_amount_output) > 0):
         cleared_amount_output = cleared_amount_output[0]
+        
+    else:
+        cleared_amount_output = {}
+    
         
         
         
@@ -1089,7 +1111,8 @@ WHERE
     if(len(pending_amount_output) > 0):
         pending_amount_output = pending_amount_output[0]
     
-    
+    else:
+        pending_amount_output = {}
         
     final_data = {
         **order_amount_output,
@@ -1164,7 +1187,7 @@ async def user_order_vs_sale_month_wise(request: Request):
         ON m1.Code = t21.MasterCode1
     WHERE t1.VchType IN (3,9)
     AND t1.RecType IN (2,7)
-    AND m1.Name LIKE '%{request.state.PartyName}%'
+    AND m1.Name = '{request.state.PartyName}'
     GROUP BY YEAR(t1.Date), MONTH(t1.Date)
     ORDER BY Year, Month;"""
     order_vs_sale_month_wise_output = run_query(order_vs_sale_month_wise_Sql)
@@ -1199,7 +1222,7 @@ async def quaterwise_target_vs_achievement(request: Request):
             ON m1.Code = t21.MasterCode1
         WHERE t1.VchType IN (3,9)
         AND t1.RecType IN (2,7)
-        AND m1.Name LIKE '%{request.state.PartyName}%'
+        AND m1.Name = '{request.state.PartyName}'
         GROUP BY 
             YEAR(t1.Date),
             DATEPART(QUARTER, t1.Date)
@@ -1393,7 +1416,7 @@ async def Customer_Dashboard_Cards(request: Request):
             LEFT JOIN Master1 m1 ON m1.Code = Tran1.MasterCode1
             WHERE 
                 Tran3.VchType IN (12, 9)
-                AND m1.Name LIKE '{request.state.PartyName}'
+                AND m1.Name = '{request.state.PartyName}'
             GROUP BY 
                 m1.Name,
                 Tran3.RefCode
@@ -1463,6 +1486,11 @@ async def Customer_Dashboard_Cards(request: Request):
     
     if(len(get_data) > 0):
         get_data = get_data[0]
+    else:
+        get_data = {}
+        
+    
+    print(get_data,"get_dataget_dataget_dataget_dataget_data")
         
         
     
@@ -1539,15 +1567,33 @@ async def open_closing_amount(request: Request):
         FROM Tran2 t
         JOIN Master1 m ON t.MasterCode1 = m.Code
         JOIN Folio1 f ON f.MasterCode = m.Code
-        WHERE m.Name LIKE '{request.state.PartyName}%'
+        WHERE m.Name = '{request.state.PartyName}'
         GROUP BY f.D1;"""
     open_closing_amount = run_query(open_closing_amount_sql)
     
     
     if(len(open_closing_amount) > 0):
         open_closing_amount = open_closing_amount[0]
+    else:
         
+        open_closing_same_amount_sql = f"""
+            SELECT 
+                ABS(f.D1) AS OpeningBalance,
+                0 AS Credit,
+                0 AS Debit,
+                0 NetTotal,
+                ABS(f.D1) AS ClosingBalance
+            FROM Folio1 f join "Master1" m ON f.MasterCode = m.Code
+            WHERE m.Name = '{request.state.PartyName}';"""
+        open_closing_same_amount = run_query(open_closing_same_amount_sql)
         
+        print(open_closing_same_amount,"open_closing_same_amountopen_closing_same_amount")
+        
+        if(len(open_closing_same_amount) > 0):
+            open_closing_amount = open_closing_same_amount[0]
+            
+        else:
+            open_closing_amount = {}
     
     
 
@@ -1570,7 +1616,7 @@ async def achievement_amount(request: Request):
             ON t2.VchNo = t1.VchNo
         WHERE t1.VchType IN (9,3)
         AND t1.Cancelled = 0
-        AND m1.Name LIKE '%{request.state.PartyName}%'
+        AND m1.Name = '{request.state.PartyName}'
         AND t2.RecType IN (2,7);;"""
     achievement_amount_data = run_query(achievement_amount_sql)
     

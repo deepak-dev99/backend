@@ -57,12 +57,18 @@ def token_busy_info(request: Request):
         request.state.user_details = user_details
         
         
-        print(user_details["email"])
+        print(user_details,"dasndjnsakjdnksaj")
         
         
-        sqal_q = f"SELECT TOP 1 PartyName FROM BillingDet where Email = '{user_details["email"]}';"
-  
+        # sqal_q = f"SELECT TOP 1 PartyName FROM BillingDet where Email = '{user_details["email"]}';"
+
+
+        sqal_q = f"SELECT Name as PartyName FROM MasterAddressInfo ma Join Master1 m on m.Code = ma.MasterCode where GSTNo = '{user_details["gst"]}' AND ITPAN='{user_details["pan"]}' AND Email = '{user_details["email"]}';"
+        
+        print(sqal_q,"sqal_qsqal_qsqal_q")
+        
         output = run_query(sqal_q)
+        
         
         
         if(len(output) > 0):
