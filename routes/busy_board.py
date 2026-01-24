@@ -151,6 +151,17 @@ ORDER BY
     
 
 
+@router.get("/user_dashboard_test", status_code=200)
+async def user_dashboard_invoice(request: Request):
+
+    test_sql = """SELECT Tran2.*, "Tran2"."VchType","Tran2"."VchNo","Master1"."Name" from "Tran2" join "Master1" on "Master1"."Code" = "Tran2"."MasterCode1" WHERE "VchNo" in ('                      244','                       50')"""
+    
+    group_invoice_output = run_query(test_sql)
+    
+    
+    return group_invoice_output
+
+
 @router.get("/user_dashboard_invoice", status_code=200)
 async def user_dashboard_invoice(request: Request):
     
@@ -407,46 +418,99 @@ async def user_dashboard_ledger(request: Request):
 
 
 
-    ledger_Sql = f"""select * from (SELECT 
-        t1."Date",
-        t1."VchNo",
-        m2."Name" AS "Account",
-        m1."Name" AS Party1,
-        t1."VchType",
-        t1."Value1",
+    # ledger_Sql = f"""select * from (SELECT 
+    #     t1."Date",
+    #     t1."VchNo",
+    #     m2."Name" AS "Account",
+    #     m1."Name" AS Party1,
+    #     t1."VchType",
+    #     t1."Value1",
         
-        t1."ShortNar",
+    #     t1."ShortNar",
         
-        CASE 
-            WHEN t1."Value1" >= 0 THEN ABS(t1."Value1")
-            ELSE 0
-            END AS Cr,
+    #     CASE 
+    #         WHEN t1."Value1" >= 0 THEN ABS(t1."Value1")
+    #         ELSE 0
+    #         END AS Cr,
 
-            CASE 
-            WHEN t1."Value1" < 0 THEN ABS(t1."Value1")
-            ELSE 0
-            END AS Dr,
+    #         CASE 
+    #         WHEN t1."Value1" < 0 THEN ABS(t1."Value1")
+    #         ELSE 0
+    #         END AS Dr,
 
-            CASE 
-            WHEN t1."Value1" >= 0 THEN 'Credit'
-            ELSE 'Debit'
-            END AS DrCr
-    FROM Tran2 t1
-    JOIN Tran2 t2
-        ON t1."VchNo" = t2."VchNo"  
-    JOIN Master1 m1
-        ON m1."Code" = t1."MasterCode1"
-    JOIN Master1 m2
-        ON m2."Code" = t2."MasterCode1"
-    WHERE 
-        t1."MasterCode1" <> t2."MasterCode1"
-      AND m1."Name" like '{request.state.PartyName}'
-        AND t2."VchType" IN (3, 9,14,17,18)
-        AND t2."RecType" = 1
-        AND t1."RecType" = 1
-        AND t2."SrNo" = 2) as data ORDER BY Date ASC, "VchType" ASC , "VchNo" ASC;"""
+    #         CASE 
+    #         WHEN t1."Value1" >= 0 THEN 'Credit'
+    #         ELSE 'Debit'
+    #         END AS DrCr
+    # FROM Tran2 t1
+    # JOIN Tran2 t2
+    #     ON t1."VchNo" = t2."VchNo"  
+    # JOIN Master1 m1
+    #     ON m1."Code" = t1."MasterCode1"
+    # JOIN Master1 m2
+    #     ON m2."Code" = t2."MasterCode1"
+    # WHERE 
+    #     t1."MasterCode1" <> t2."MasterCode1"
+    #   AND m1."Name" like '{request.state.PartyName}'
+    #     AND t2."VchType" IN (3, 9,14,17,18)
+    #     AND t2."RecType" = 1
+    #     AND t1."RecType" = 1
+    #     AND t2."SrNo" = 2) as data ORDER BY Date ASC, "VchType" ASC , "VchNo" ASC;"""
     
+    
+    ledger_Sql = f"""
 
+SELECT
+    t2a."Date",
+    t2a."VchCode",
+    t2a."VchNo",
+    t2b."SrNo",
+    t2b."RecType",
+    t2a."VchType",
+    
+    CASE 
+    WHEN t2a."VchType" <> 9 THEN ABS(t2a."Value1")
+    ELSE 0
+    END AS Cr,
+
+    CASE 
+    WHEN t2a."VchType" = 9 THEN ABS(t2a."Value1")
+    ELSE 0
+    END AS Dr,
+
+    CASE 
+    WHEN t2a."VchType" <> 9 THEN 'Credit'
+    ELSE 'Debit'
+    END AS DrCr,
+    t2a."MasterCode1" AS DebitCode,
+    m1a."Name"       AS Party1,
+
+    t2b."MasterCode1" AS CreditCode,
+    m1b."Name"        AS "Account",
+    t2a."ShortNar",
+    t2a."Value1" AS DebitValue,
+    t2b."Value1" AS CreditValue
+FROM "Tran2" t2a
+JOIN "Tran2" t2b
+    ON t2a."VchCode" = t2b."VchCode"
+   AND t2a."SrNo" <> t2b."SrNo"     -- avoid same row
+JOIN "Master1" m1a
+    ON m1a."Code" = t2a."MasterCode1"
+JOIN "Master1" m1b
+    ON m1b."Code" = t2b."MasterCode1"
+WHERE (
+    t2a."VchType" IN (14,16)
+    OR 
+    (t2a."VchType" IN (2) AND t2b."SrNo" = 2 AND t2b."RecType" = 1)
+    OR 
+    (t2a."VchType" IN (9) AND t2b."SrNo" = 2 AND t2b."RecType" = 1)
+    OR 
+    (t2a."VchType" IN (18) AND t2b."SrNo" = 2)
+)
+  AND m1a."Name" = '{request.state.PartyName}'
+  AND t2a."MasterCode1" <> t2b."MasterCode1"
+  ORDER BY Date ASC, t2a."VchType";
+"""
     ledger_output = run_query(ledger_Sql)
 
 
