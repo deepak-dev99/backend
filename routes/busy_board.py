@@ -1435,6 +1435,75 @@ async def user_order_vs_sale_month_wise(request: Request):
     
     
     
+@router.get("/all_item_wise_sales", status_code=200)
+async def all_item_wise_sales(request: Request):
+    
+#     all_item_wise_sales_Sql = f"""SELECT
+#     m1."Name" AS master1_name,
+#     SUM(t3."NewRefAmount") AS total_new_ref_amount,
+#     SUM(t3."Value1")       AS total_value1,
+#     MAX(t3."Balance1")     AS total_balance1
+# FROM "Tran3" t3
+# JOIN "Master1" m1 ON t3."MasterCode1" = m1."Code"
+# JOIN "Master1" m2 ON t3."MasterCode2" = m2."Code"
+# WHERE t3."Type" = 1 AND 
+#     t3."VchType" = 12
+# GROUP BY m1."Name"
+# ORDER BY total_value1 DESC;
+# """
+    all_item_wise_sales_Sql = f"""
+    
+SELECT
+    m1.[Name] AS master1_name,
+
+    SUM(t3.[NewRefAmount]) AS total_new_ref_amount,
+    SUM(t3.[Value1])       AS total_value1,
+    MAX(t3.[Balance1])     AS balance1_price,
+
+    (
+        SELECT
+            t3i.[No]        AS [No],
+            m2i.[Name]      AS [Master2Name],
+            t3i.[NewRefAmount],
+            t3i.[Value1],
+            t3i.[Balance1]
+        FROM [Tran3] t3i
+        JOIN [Master1] m2i ON t3i.[MasterCode2] = m2i.[Code]
+        WHERE t3i.[MasterCode1] = t3.[MasterCode1]
+          AND t3i.[Type] = 1
+          AND t3i.[VchType] = 12
+        ORDER BY t3i.[No]
+        FOR JSON PATH
+    ) AS details
+
+FROM [Tran3] t3
+JOIN [Master1] m1 ON t3.[MasterCode1] = m1.[Code]
+
+WHERE t3.[Type] = 1
+  AND t3.[VchType] = 12
+
+GROUP BY
+    m1.[Name],
+    t3.[MasterCode1]
+
+ORDER BY total_value1 DESC;
+"""
+    all_item_wise_sales_output = run_query(all_item_wise_sales_Sql)
+    
+    
+    
+    
+        
+    
+      
+    return JSONResponse(status_code=200, content={"status": True, "message":" Dashboard Successfully","data": all_item_wise_sales_output})
+    
+    
+    
+    
+    
+    
+    
 @router.get("/quaterwise_target_vs_achievement", status_code=200)
 async def quaterwise_target_vs_achievement(request: Request):
     
