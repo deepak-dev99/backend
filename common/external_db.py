@@ -6,7 +6,7 @@ from fastapi.encoders import jsonable_encoder
 server = '10.18.213.225,1433'
 database = 'BusyComp0013_db12025'  # Replace with your database
 username = 'mebadba'
-password = 'UDBO@india'
+password = 'MebaIndia@123'
 sql_file = 'testing_sql.sql'  # Path to your SQL file
 
 # ---------- Connect to SQL Server ----------

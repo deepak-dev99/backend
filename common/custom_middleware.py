@@ -62,24 +62,36 @@ def token_busy_info(request: Request):
         
         # sqal_q = f"SELECT TOP 1 PartyName FROM BillingDet where Email = '{user_details["email"]}';"
 
-
-        sqal_q = f"SELECT Name as PartyName FROM MasterAddressInfo ma Join Master1 m on m.Code = ma.MasterCode where GSTNo = '{user_details["gst"]}' AND ITPAN='{user_details["pan"]}' AND Email = '{user_details["email"]}';"
-        
-        print(sqal_q,"sqal_qsqal_qsqal_q")
-        
-        output = run_query(sqal_q)
-        
-        
-        
-        if(len(output) > 0):
+        sqal_q = ""
+        print(user_details,"user_detailsuser_details")\
             
-            # request.state.PartyName = output[0]["PartyName"]
-            # request.state.PartyName = output[0]["PartyName"]
-            request.state.PartyName = user_details["name"]
-            print(output[0]["PartyName"],"outputoutputoutput")
+        if(user_details["userType"] != "admin_team"):
+                
+            if(user_details and user_details["gst"] and user_details["pan"]):
+                sqal_q = f"SELECT Name as PartyName FROM MasterAddressInfo ma Join Master1 m on m.Code = ma.MasterCode where GSTNo = '{user_details["gst"]}' AND ITPAN='{user_details["pan"]}' AND Email = '{user_details["email"]}';"
             
+            else:
+                sqal_q = f"SELECT Name as PartyName FROM MasterAddressInfo ma Join Master1 m on m.Code = ma.MasterCode where Email = '{user_details["email"]}"
+            
+            
+            print(sqal_q,"sqal_qsqal_qsqal_q")
+            
+            output = run_query(sqal_q)
+            
+            
+            
+            if(len(output) > 0):
+                
+                # request.state.PartyName = output[0]["PartyName"]
+                # request.state.PartyName = output[0]["PartyName"]
+                request.state.PartyName = user_details["name"]
+                print(output[0]["PartyName"],"outputoutputoutput")
+                
+            else:
+                
+                request.state.PartyName = ""
+                
         else:
-            
             request.state.PartyName = ""
             
         return user_details

@@ -742,6 +742,237 @@ ORDER BY
     
     
     
+    
+    
+
+@router.get("/get_daily_order_booking_vs_dispatch", status_code=200)
+async def get_daily_order_booking_vs_dispatch(
+    request: Request,
+    start_date: date | None = Query(default=None),
+    end_date: date | None = Query(default=None),
+):
+    # -------------------------------
+    # Default date logic
+    # -------------------------------
+    if not end_date:
+        end_date = date.today()
+
+    if not start_date:
+        start_date = end_date - timedelta(days=10)
+
+    # Convert to string for SQL
+    start_date_str = start_date.strftime("%Y-%m-%d")
+    end_date_str = end_date.strftime("%Y-%m-%d")
+
+    # -------------------------------
+    # DAILY ORDER BOOKING QUERY
+    # -------------------------------
+    daily_order_booking_Sql = f"""
+    SELECT 
+        CAST(t2.[Date] AS date) AS TranDate,
+
+        SUM(t2.Value1) AS Ordered,
+        SUM(t2.Value3) AS OrderedA,
+
+        SUM(t3sum.TotalValue1) AS Pending,
+        SUM(t3sum.TotalNewRefAmount) AS NewRefAmount,
+        SUM(t3sum.TotalValue3) AS PendingA,
+
+        (SUM(t2.Value1) - ISNULL(SUM(t3sum.TotalValue1), 0)) AS Cleared
+
+    FROM Tran2 t2
+
+    LEFT JOIN (
+        SELECT 
+            MasterCode1,
+            No,
+            SUM(Value1) AS TotalValue1,
+            SUM(NewRefAmount) AS TotalNewRefAmount,
+            CASE 
+                WHEN SUM(Value1) <> 0 THEN SUM(Value3)
+                ELSE 0
+            END AS TotalValue3
+        FROM Tran3
+        GROUP BY MasterCode1, No
+    ) t3sum 
+        ON t2.MasterCode1 = t3sum.MasterCode1 
+        AND t2.VchNo = t3sum.No
+
+    WHERE 
+        t2.RecType = 4
+        AND t2.VchType = 12
+        AND CAST(t2.[Date] AS date) BETWEEN '{start_date_str}' AND '{end_date_str}'
+
+    GROUP BY 
+        CAST(t2.[Date] AS date)
+
+    ORDER BY 
+        TranDate;
+    """
+
+    daily_order_booking_output = run_query(daily_order_booking_Sql)
+
+    # -------------------------------
+    # DISPATCH QUERY
+    # -------------------------------
+    dispatch_order_booking_Sql = f"""
+    SELECT 
+        CAST(t2.[Date] AS date) AS TranDate,
+
+        SUM(ABS(t2.Value1)) AS Quantity,
+        SUM(ABS(t2.Value3)) AS Amount
+
+    FROM Tran2 t2
+
+    LEFT JOIN Tran1 t1 
+        ON t2.VchCode = t1.VchCode
+
+    WHERE 
+        t1.VchType = 9
+        AND t2.RecType = 2
+        AND t1.Cancelled = 0
+        AND CAST(t2.[Date] AS date) BETWEEN '{start_date_str}' AND '{end_date_str}'
+
+    GROUP BY 
+        CAST(t2.[Date] AS date)
+
+    ORDER BY 
+        TranDate;
+    """
+
+    dispatch_order_booking_output = run_query(dispatch_order_booking_Sql)
+
+    # -------------------------------
+    # FINAL RESPONSE
+    # -------------------------------
+    final_data = {
+        "from_date": start_date_str,
+        "to_date": end_date_str,
+
+        "daily_order_booking_count": len(daily_order_booking_output),
+        "daily_order_booking_output": daily_order_booking_output,
+
+        "dispatch_order_booking_count": len(dispatch_order_booking_output),
+        "dispatch_order_booking_output": dispatch_order_booking_output
+    }
+
+    return JSONResponse(
+        status_code=200,
+        content={
+            "status": True,
+            "message": "Order booking vs dispatch data fetched successfully",
+            "data": final_data
+        }
+    )
+
+
+# async def get_daily_order_booking_vs_dispatch(request: Request):
+    
+    
+#     print(request.state.PartyName,"PartyNamePartyNamePartyNamePartyName")
+    
+#     daily_order_booking_Sql = f"""SELECT 
+#         CAST(t2.[Date] AS date) AS TranDate,
+
+#         SUM(t2.Value1) AS Ordered,
+#         SUM(t2.Value3) AS OrderedA,
+
+#         SUM(t3sum.TotalValue1) AS Pending,
+#         SUM(t3sum.TotalNewRefAmount) AS NewRefAmount,
+#         SUM(t3sum.TotalValue3) AS PendingA,
+
+#         (SUM(t2.Value1) - ISNULL(SUM(t3sum.TotalValue1), 0)) AS Cleared
+
+#         FROM Tran2 t2
+
+#         LEFT JOIN (
+#         SELECT 
+#             MasterCode1,
+#             No,
+#             SUM(Value1) AS TotalValue1,
+#             SUM(NewRefAmount) AS TotalNewRefAmount,
+#             CASE 
+#                 WHEN SUM(Value1) <> 0 THEN SUM(Value3)
+#                 ELSE 0
+#             END AS TotalValue3
+#         FROM Tran3
+#         GROUP BY MasterCode1, No
+#         ) t3sum 
+#         ON t2.MasterCode1 = t3sum.MasterCode1 
+#         AND t2.VchNo = t3sum.No
+
+#         WHERE 
+#         t2.RecType = 4
+#         AND t2.VchType = 12
+#         AND t2.[Date] >= DATEADD(DAY, -10, CAST(GETDATE() AS date))
+
+#         GROUP BY 
+#         CAST(t2.[Date] AS date)
+
+#         ORDER BY 
+#         TranDate;
+#         """
+    
+    
+    
+    
+#     daily_order_booking_output = run_query(daily_order_booking_Sql)
+    
+    
+#     dispatch_order_booking_Sql = f"""
+# SELECT 
+#     CAST(t2.[Date] AS date) AS TranDate,
+
+#     SUM(ABS(t2.Value1)) AS Quantity,
+#     SUM(ABS(t2.Value3)) AS Amount
+
+# FROM Tran2 t2
+
+# LEFT JOIN Tran1 t1 
+#     ON t2.VchCode = t1.VchCode
+
+# LEFT JOIN Master1 m1 
+#     ON m1.Code = t1.MasterCode1
+
+# LEFT JOIN Master1 m2
+#     ON m2.Code = t2.MasterCode1
+
+# LEFT JOIN Master1 m3
+#     ON m3.Code = t2.CM2
+
+# WHERE 
+#     t1.VchType = 9
+#     AND t2.RecType = 2
+#     AND t1.Cancelled = 0
+#     AND t2.[Date] >= DATEADD(DAY, -10, CAST(GETDATE() AS date))
+
+# GROUP BY 
+#     CAST(t2.[Date] AS date)
+
+# ORDER BY 
+#     TranDate;
+# """
+    
+    
+    
+    
+#     dispatch_order_booking_output = run_query(dispatch_order_booking_Sql)
+    
+    
+#     final_data = {
+#         "daily_order_booking_count":len(daily_order_booking_output),
+#         "daily_order_booking_output":daily_order_booking_output
+#         "dispatch_order_booking_count":len(dispatch_order_booking_output),
+#         "dispatch_order_booking_output":dispatch_order_booking_output
+#     }
+    
+    
+#     # print(final_data,"cnr_outputcnr_outputcnr_output")
+#     return JSONResponse(status_code=200, content={"status": True, "message":"order_booking_records_output Dashboard Successfully","data": final_data})
+    
+    
+    
+    
 
 @router.get("/pending_records", status_code=200)
 async def pending_records(request: Request):
@@ -1242,6 +1473,50 @@ async def quaterwise_target_vs_achievement(request: Request):
     
     
 
+
+
+
+@router.get("/party_wise_target_vs_achievement", status_code=200)
+async def party_wise_target_vs_achievement(request: Request):
+    
+    
+    
+    party_wise_target_vs_achievement_Sql = f"""
+        SELECT 
+    m1.[Name] AS PartyName,
+
+    ROUND(ABS(SUM(t1.Value3)), 0) AS TotalValue3,
+    ROUND(ABS(SUM(t1.Value1)), 0) AS TotalValue1
+
+FROM Tran2 t1 
+
+LEFT JOIN Tran1 t21
+    ON t21.VchNo = t1.VchNo
+
+LEFT JOIN Master1 m1 
+    ON m1.Code = t21.MasterCode1
+
+WHERE 
+    t1.VchType IN (3, 9)
+    AND t1.RecType IN (2, 7)
+
+GROUP BY 
+    m1.[Name]
+
+ORDER BY 
+    PartyName;
+"""
+    party_wise_target_vs_achievement_output = run_query(party_wise_target_vs_achievement_Sql)
+    
+    
+    
+    
+        
+    
+      
+    return JSONResponse(status_code=200, content={"status": True, "message":" Dashboard Successfully","data": party_wise_target_vs_achievement_output})
+    
+    
 
 
 @router.get("/region_wise_sales", status_code=200)
