@@ -1,6 +1,6 @@
 from fastapi import Request, HTTPException, Depends
 from base import caa,run_query  # assuming caa is defined in base (e.g. token utilities)
-
+import traceback
 
 
 def verify_token(request: Request):
@@ -28,6 +28,8 @@ def verify_token(request: Request):
         print("Invalid Authorization header format")
         raise HTTPException(status_code=401, detail="Invalid Authorization header format")
     except Exception as e:
+        
+        print(traceback.print_exc())
         print("Invalid Authorization header format"+str(e))
         raise HTTPException(status_code=401, detail=f"Invalid or expired token: {str(e)}")
 
@@ -65,7 +67,7 @@ def token_busy_info(request: Request):
         sqal_q = ""
         print(user_details,"user_detailsuser_details")\
             
-        if(user_details["userType"] != "admin_team"):
+        if(user_details["userType"] != "admin_team" and user_details["userType"] != "customer"):
                 
             if(user_details and user_details["gst"] and user_details["pan"]):
                 sqal_q = f"SELECT Name as PartyName FROM MasterAddressInfo ma Join Master1 m on m.Code = ma.MasterCode where GSTNo = '{user_details["gst"]}' AND ITPAN='{user_details["pan"]}' AND Email = '{user_details["email"]}';"

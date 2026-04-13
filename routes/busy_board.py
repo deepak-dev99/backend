@@ -568,7 +568,13 @@ async def one_user_details(request: Request):
         a."WhatsAppNo",
         a."C4" AS "BankName",
         a."C5" AS "BankACNo",
-        a."OF7" AS "CompanyTarget",
+        # a."OF7" AS "CompanyTarget",
+            
+        CAST(
+            CAST(
+                CONVERT(VARBINARY(8), REPLACE(a.OF7,'@',''), 2) 
+            AS BIGINT
+        ) AS VARCHAR) AS CompanyTarget,
         m1."Name"  AS "Region",
         m2."Name"  AS "AreaManager",
         m3."Name"  AS "SaleType",
@@ -1550,30 +1556,34 @@ async def party_wise_target_vs_achievement(request: Request):
     
     
     
-    party_wise_target_vs_achievement_Sql = f"""
-        SELECT 
-    m1.[Name] AS PartyName,
+    party_wise_target_vs_achievement_Sql = """
+        
 
-    ROUND(ABS(SUM(t1.Value3)), 0) AS TotalValue3,
-    ROUND(ABS(SUM(t1.Value1)), 0) AS TotalValue1
+SELECT 
+    d.*,
+    a.OF7 AS Target
+FROM (
+    SELECT 
+        m1.[Name] AS PartyName,
+        m1.[Code] AS PartyCode,
+        ROUND(ABS(SUM(t1.Value3)), 0) AS TotalValue3,
+        ROUND(ABS(SUM(t1.Value1)), 0) AS TotalValue1
+    FROM Tran2 t1 
+    LEFT JOIN Tran1 t21
+        ON t21.VchNo = t1.VchNo
+    LEFT JOIN Master1 m1 
+        ON m1.Code = t21.MasterCode1
+    WHERE 
+        t1.VchType IN (3, 9)
+        AND t1.RecType IN (2, 7)
+    GROUP BY 
+        m1.[Name],
+        m1.[Code]
+) AS d
+LEFT JOIN MasterAddressInfo a
+    ON a.MasterCode = d.PartyCode
+ORDER BY d.PartyName;
 
-FROM Tran2 t1 
-
-LEFT JOIN Tran1 t21
-    ON t21.VchNo = t1.VchNo
-
-LEFT JOIN Master1 m1 
-    ON m1.Code = t21.MasterCode1
-
-WHERE 
-    t1.VchType IN (3, 9)
-    AND t1.RecType IN (2, 7)
-
-GROUP BY 
-    m1.[Name]
-
-ORDER BY 
-    PartyName;
 """
     party_wise_target_vs_achievement_output = run_query(party_wise_target_vs_achievement_Sql)
     
@@ -1584,6 +1594,57 @@ ORDER BY
     
       
     return JSONResponse(status_code=200, content={"status": True, "message":" Dashboard Successfully","data": party_wise_target_vs_achievement_output})
+    
+    
+
+
+
+
+
+
+@router.get("/salesman_party_wise_target_vs_achievement", status_code=200)
+async def salesman_party_wise_target_vs_achievement(request: Request):
+    
+    
+    
+    salesman_party_wise_target_vs_achievement_Sql = f"""
+        
+
+SELECT 
+    d.*,
+    a.OF7 AS Target
+FROM (
+    SELECT 
+        m1.[Name] AS PartyName,
+        m1.[Code] AS PartyCode,
+        ROUND(ABS(SUM(t1.Value3)), 0) AS TotalValue3,
+        ROUND(ABS(SUM(t1.Value1)), 0) AS TotalValue1
+    FROM Tran2 t1 
+    LEFT JOIN Tran1 t21
+        ON t21.VchNo = t1.VchNo
+    LEFT JOIN Master1 m1 
+        ON m1.Code = t21.MasterCode1
+    WHERE 
+        t1.VchType IN (3, 9)
+        AND t1.RecType IN (2, 7)
+    GROUP BY 
+        m1.[Name],
+        m1.[Code]
+) AS d
+LEFT JOIN MasterAddressInfo a
+    ON a.MasterCode = d.PartyCode
+ORDER BY d.PartyName;
+
+"""
+    salesman_party_wise_target_vs_achievement_output = run_query(salesman_party_wise_target_vs_achievement_Sql)
+    
+    
+    
+    
+        
+    
+      
+    return JSONResponse(status_code=200, content={"status": True, "message":" Dashboard Successfully","data": salesman_party_wise_target_vs_achievement_output})
     
     
 
@@ -1973,5 +2034,265 @@ async def achievement_amount(request: Request):
     
 
     return JSONResponse(status_code=200, content={"status": True, "message":"achievement_amount_data Successfully","data": achievement_amount_data})
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+# =======================================================================================================
+
+
+
+
+@router.get("/master_salesman", status_code=200)
+async def busy_salesman(request: Request):
+    
+    salesman_sql = """SELECT 
+    m1.Code, 
+    m1.Name,
+    maddr.Address1,
+    maddr.Address2,
+    maddr.Email,
+    maddr.TelNo,
+    maddr.WhatsAppNo,
+    maddr.Contact,
+    
+    m7."Name"  AS "Country",
+    m8."Name"  AS "State",
+    m9."Name"  AS "City",
+    m10."Name" AS "Region",
+    m11."Name" AS "Area"
+
+FROM Master1 m1
+
+LEFT JOIN MasterAddressInfo maddr 
+    ON maddr.MasterCode = m1.Code 
+
+LEFT JOIN Master1 m7  
+    ON m7."Code" = maddr."CountryCodeLong"
+
+LEFT JOIN Master1 m8  
+    ON m8."Code" = maddr."StateCodeLong"
+
+LEFT JOIN Master1 m9  
+    ON m9."Code" = maddr."CityCodeLong"
+
+LEFT JOIN Master1 m10 
+    ON m10."Code" = maddr."RegionCodeLong"
+
+LEFT JOIN Master1 m11 
+    ON m11."Code" = maddr."AreaCodeLong"
+
+WHERE m1.MasterType = 19;
+"""
+    
+    salesman_data = run_query(salesman_sql)
+    
+
+    return JSONResponse(status_code=200, content={"status": True, "message":"salesman Successfully","data": salesman_data})
+    
+
+
+
+
+
+
+
+@router.get("/salesman_party", status_code=200)
+async def salesman_party(request: Request):
+    
+    
+    print(request.state,"request.staterequest.staterequest.state")
+    salesman_sql = f""" SELECT m1.Name, m1.Code,
+        a.WhatsAppNo,
+        m7."Name"  AS "Country",
+        m8."Name"  AS "State",
+        m9."Name"  AS "City",
+        m10."Name"  AS "Region",
+        m11."Name"  AS "Area"
+        from Master1 as m1
+    LEFT JOIN MasterAddressInfo a ON a.MasterCode = m1.Code 
+    LEFT JOIN "Master1" m7  ON m7."Code" = a."CountryCodeLong"
+    LEFT JOIN "Master1" m8  ON m8."Code" = a."StateCodeLong"
+    LEFT JOIN "Master1" m9  ON m9."Code" = a."CityCodeLong"
+    LEFT JOIN "Master1" m10  ON m10."Code" = a."RegionCodeLong"
+    LEFT JOIN "Master1" m11  ON m11."Code" = a."AreaCodeLong"
+    WHERE m1.MasterType = 2 AND m1.ParentGrp = 116 and m1.CM3 = 20567;
+;"""
+    
+    salesman_data = run_query(salesman_sql)
+    
+
+    return JSONResponse(status_code=200, content={"status": True, "message":"salesman Successfully","data": salesman_data})
+    
+
+@router.get("/master_salesman_info/{salesman_id}", status_code=200)
+async def busy_salesman_info(request: Request,salesman_id: str):
+    
+    salesman_sql = f"""SELECT m1.Code, m1.Name, m1.Name, maddr.Email, maddr.TelNo, maddr.WhatsAppNo, maddr.Contact FROM Master1 m1 LEFT JOIN MasterAddressInfo maddr on maddr.MasterCode = m1.Code where m1.MasterType = 19 and m1.Code = {salesman_id};"""
+    
+    salesman_data = run_query(salesman_sql)
+    
+
+    return JSONResponse(status_code=200, content={"status": True, "message":"salesman Successfully","data": salesman_data})
+    
+
+
+
+
+@router.get("/salesman_ledger", status_code=200)
+async def salesman_ledger(request: Request):
+    
+    
+    print(request.state.PartyName,"PartyNamePartyNamePartyNamePartyName")
+    
+    ledger_Sql = f"""
+
+SELECT
+    t2a."Date",
+    t2a."VchCode",
+    t2a."VchNo",
+    t2b."SrNo",
+    t2b."RecType",
+    t2a."VchType",
+    
+    CASE 
+    WHEN t2a."VchType" NOT IN (9,17) THEN ABS(t2a."Value1")
+    ELSE 0
+    END AS Cr,
+
+    CASE 
+    WHEN t2a."VchType" IN (9,17) THEN ABS(t2a."Value1")
+    ELSE 0
+    END AS Dr,
+
+    CASE 
+    WHEN t2a."VchType" IN (9,17) THEN 'Debit'
+    ELSE 'Credit'
+    END AS DrCr,
+    t2a."MasterCode1" AS DebitCode,
+    m1a."Name"       AS Party1,
+
+    t2b."MasterCode1" AS CreditCode,
+    m1b."Name"        AS "Account",
+    t2a."ShortNar",
+    t2a."Value1" AS DebitValue,
+    t2b."Value1" AS CreditValue
+FROM "Tran2" t2a
+JOIN "Tran2" t2b
+    ON t2a."VchCode" = t2b."VchCode"
+   AND t2a."SrNo" <> t2b."SrNo"     -- avoid same row
+JOIN "Master1" m1a
+    ON m1a."Code" = t2a."MasterCode1"
+JOIN "Master1" m1b
+    ON m1b."Code" = t2b."MasterCode1"
+WHERE (
+    
+    t2a."VchType" IN (14)
+    OR 
+    (t2a."VchType" IN (16) AND t2b."SrNo" = 1)
+    OR 
+    (t2a."VchType" IN (2) AND t2b."SrNo" = 2 AND t2b."RecType" = 1)
+    OR 
+    (t2a."VchType" IN (9) AND t2b."SrNo" = 2 AND t2b."RecType" = 1)
+    OR 
+    (t2a."VchType" IN (3) AND t2b."SrNo" = 2 AND t2b."RecType" = 1)
+    OR 
+    (t2a."VchType" IN (18) AND t2b."SrNo" = 2)
+    OR 
+    (t2a."VchType" IN (17) AND t2b."SrNo" = 2)
+)
+  and m1a.CM3 = 20567
+  AND t2a."MasterCode1" <> t2b."MasterCode1"
+  ORDER BY Date ASC, t2a."VchType";
+"""
+    ledger_output = run_query(ledger_Sql)
+
+
+    
+    final_data = {
+        "ledger_output_count":len(ledger_output),
+        "ledger_output":ledger_output
+    }
+    
+    
+    # print(final_data,"cnr_outputcnr_outputcnr_output")
+    return JSONResponse(status_code=200, content={"status": True, "message":"ledger Dashboard Successfully","data": final_data})
+    
+    
+    
+
+@router.get("/salesman_pending_records", status_code=200)
+async def salesman_pending_records(request: Request):
+    
+    
+    print(request.state.PartyName,"PartyNamePartyNamePartyNamePartyName")
+
+    pending_records_Sql = f"""
+
+SELECT 
+        t2."Date" as Date,
+        m1."Name" as ClientName,
+        m2."Name" as Item,
+        t2.d1 As TotalQty,
+        t2.d1 * t2.d6 AS TotalAmt,
+        t2.d1 - agg.TotalValue1 AS ClearedQty,
+        (t2.d1 - agg.TotalValue1) * t2.d6 ClearedAmt,
+        agg.TotalValue1 as PendingQty,
+        agg.TotalValue1 * t2.d6 AS PendingAmt,
+        t2.VchNo,
+        t2."CM1",
+        t2."VchCode",
+        t2."MasterCode1"
+    FROM Tran2 t2
+    JOIN Master1 m1 ON m1."Code" = t2."CM1"
+    JOIN Master1 m2 ON m2."Code" = t2."MasterCode1"
+    LEFT JOIN (
+        SELECT 
+            [No],
+            [MasterCode1],
+            SUM([Value1]) AS TotalValue1
+        FROM Tran3
+        GROUP BY [No],[MasterCode1]
+    ) agg 
+        ON agg.[No] = t2.[VchNo]
+       AND agg.[MasterCode1] = t2.[MasterCode1]
+    WHERE 
+        t2.[RecType] IN (4,3) 
+        AND agg.TotalValue1 > 0 
+        order by Date DESC;
+        """
+    
+
+    pending_records_output = run_query(pending_records_Sql)
+
+
+    ledger_Sql = f"SELECT * from Tran1 t1 LEFT JOIN Master1 m1 on m1.Code = t1.MasterCode1 WHERE m1.Name = '{request.state.PartyName}' AND VchType = 3;"
+
+
+    ledger_output = run_query(ledger_Sql)
+    
+    
+    final_data = {
+        "pending_records_count":len(pending_records_output),
+        "pending_records_output":pending_records_output
+    }
+    
+    
+    # print(final_data,"cnr_outputcnr_outputcnr_output")
+    return JSONResponse(status_code=200, content={"status": True, "message":"user_dashboard_cn_cnr Dashboard Successfully","data": final_data})
     
     

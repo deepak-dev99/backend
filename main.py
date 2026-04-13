@@ -42,6 +42,8 @@ app.include_router(inventory.router, prefix="/api/inventory", tags=["Inventory"]
 app.include_router(statistics.router, prefix="/api/statistics", tags=["statistics"],dependencies=[auth_dependency])
 app.include_router(common.router, prefix="/common", tags=["common"])   
 app.include_router(customer.router, prefix="/api/customer", tags=["customer"],dependencies=[auth_dependency])
+app.include_router(salesman.router, prefix="/api/salesman", tags=["salesman"],dependencies=[auth_dependency])
+app.include_router(service_dashboard.router, prefix="/api/service", tags=["service_dashboard"])
 app.include_router(busy_board.router, prefix="/api/busyboard", tags=["busyboard"],dependencies=[auth_dependency,token_busy_info_dependency])
 # app.include_router(busy_board.router, prefix="/api/busyboard", tags=["busyboard"])
 

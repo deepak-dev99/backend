@@ -47,14 +47,53 @@ def customer_login(request: Request,credentials: User.LoginRequest):
     email = credentials.email
     m_passw = credentials.password
     
-    sql_q = f"select id,uuid,name,email,phone,address,city,state,country,gst,pan,company_name,description,documents,customer_image from customers where email=%s AND password=%s;"
-    data = request.app.state.db.get_data_as_json(sql_q,(email,m_passw))
+    sql_q = f"select id,uuid,name,email,phone,address,city,state,country,password,gst,pan,company_name,description,documents,customer_image from customers where email=%s;"
+    data = request.app.state.db.get_data_as_json(sql_q,(email,))
     
     print(data)
     
     
-    if(len(data) > 0):
+    
+    if(data and len(data) > 0 and data[0]['password'] == m_passw):
+        
+        
         userInfo = data[0]
+        del userInfo['password']
+        userInfo["userType"]="customer"
+        
+        userData = {
+            "userInfo":userInfo,
+            "token":caa.create_access_token(data=userInfo)
+        }
+        
+        return JSONResponse(status_code=200, content={"status": True, "message":"Login Successfully","data": userData})
+    else:
+        return JSONResponse(status_code=401, content={"status": True, "message":"Not authorized","data": {}})
+
+
+
+
+
+@router.post("/salesman_login", status_code=200)
+def salesman_login(request: Request,credentials: User.LoginRequest):
+    
+    print("salesman_login called",request,credentials)
+    
+    
+    email = credentials.email
+    m_passw = credentials.password
+    
+    
+    print(email,"email")
+    
+    sql_q = f"select id,uuid,name,email,code,phone,address,password,salesman_image from salesmen where email=%s;"
+    data = request.app.state.db.get_data_as_json(sql_q,(email,))
+    
+    print(data)
+    
+    if(data and len(data) > 0 and data[0]['password'] == m_passw):
+        userInfo = data[0]
+        del userInfo['password']
         userInfo["userType"]="customer"
         
         userData = {
