@@ -55,3 +55,4 @@ from routes import salesman
 from routes import common
 from routes import busy_board
 from routes import service_dashboard
+from routes import admin

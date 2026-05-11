@@ -2,6 +2,12 @@ from base import *
 
 
 
+
+class FCMTokenRequest(BaseModel):
+    token: str
+
+
+
 class SalesmanModel(BaseModel):
     name: str
     email: Optional[EmailStr] = None
@@ -57,6 +63,58 @@ class SalesmanModel(BaseModel):
             status=status,
             description=description,
             code = code
+        )
+        
+        
+        
+
+class SalesmanCheckinModel(BaseModel):
+    party_id: str
+    party_name: str
+    party_address: str = ""
+    checkin_image: UploadFile
+
+    @classmethod
+    def as_form(
+        cls,
+        party_id: str = Form(...),
+        party_name: str = Form(...),
+        party_address: str = Form(...),
+        checkin_image: UploadFile = File(...),
+    ):
+        return cls(
+            party_id=party_id,
+            party_name=party_name,
+            party_address=party_address,
+            checkin_image=checkin_image,
+        )
+
+
+
+class SalesmanCheckoutModel(BaseModel):
+    checkin_id: str
+    purpose: str
+    checkin_id: str
+    discussion: str
+    remarks: str
+    
+    checkout_image: UploadFile
+
+    @classmethod
+    def as_form(
+        cls,
+        checkin_id: str = Form(...),
+        purpose: str = Form(...),
+        discussion: str = Form(...),
+        remarks: str = Form(...),
+        checkout_image: UploadFile = File(...),
+    ):
+        return cls(
+            checkin_id=checkin_id,
+            checkout_image=checkout_image,
+            purpose=purpose,
+            discussion=discussion,
+            remarks=remarks,
         )
 
 

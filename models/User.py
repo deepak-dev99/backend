@@ -7,6 +7,7 @@ class LoginRequest(BaseModel):
 
 
 
+
 class UserModel(BaseModel):
     name: str
     username: str

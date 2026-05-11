@@ -5,6 +5,7 @@ from base import *
 router = APIRouter()
 
 
+
 @router.get("/uploads/{foldername}/{filename}", status_code=200)
 async def get_upload(request: Request, foldername: str, filename: str):
     file_path = os.path.join(foldername, filename)

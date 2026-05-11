@@ -2114,24 +2114,49 @@ WHERE m1.MasterType = 19;
 @router.get("/salesman_party", status_code=200)
 async def salesman_party(request: Request):
     
+    user_details = request.state.user_details
+    print(user_details.get("email"),"request.staterequest.staterequest.state")
+#     salesman_sql = f""" SELECT m1.Name, m1.Code,
+#         a.WhatsAppNo,
+#         m7."Name"  AS "Country",
+#         m8."Name"  AS "State",
+#         m9."Name"  AS "City",
+#         m10."Name"  AS "Region",
+#         m11."Name"  AS "Area"
+#         from Master1 as m1
+#     LEFT JOIN MasterAddressInfo a ON a.MasterCode = m1.Code 
+#     LEFT JOIN "Master1" m7  ON m7."Code" = a."CountryCodeLong"
+#     LEFT JOIN "Master1" m8  ON m8."Code" = a."StateCodeLong"
+#     LEFT JOIN "Master1" m9  ON m9."Code" = a."CityCodeLong"
+#     LEFT JOIN "Master1" m10  ON m10."Code" = a."RegionCodeLong"
+#     LEFT JOIN "Master1" m11  ON m11."Code" = a."AreaCodeLong"
+#     WHERE m1.MasterType = 2 AND m1.ParentGrp = 116 and m1.CM3 = 20567;
+# ;"""
     
-    print(request.state,"request.staterequest.staterequest.state")
     salesman_sql = f""" SELECT m1.Name, m1.Code,
-        a.WhatsAppNo,
+        asales.WhatsAppNo,
+        asales."Contact",
+        asales."Mobile",
+        asales."Email",
         m7."Name"  AS "Country",
         m8."Name"  AS "State",
         m9."Name"  AS "City",
         m10."Name"  AS "Region",
-        m11."Name"  AS "Area"
+        m11."Name"  AS "Area",
+        m1.CM3
         from Master1 as m1
     LEFT JOIN MasterAddressInfo a ON a.MasterCode = m1.Code 
+    LEFT JOIN MasterAddressInfo asales ON asales.MasterCode = m1.CM3 
     LEFT JOIN "Master1" m7  ON m7."Code" = a."CountryCodeLong"
     LEFT JOIN "Master1" m8  ON m8."Code" = a."StateCodeLong"
     LEFT JOIN "Master1" m9  ON m9."Code" = a."CityCodeLong"
     LEFT JOIN "Master1" m10  ON m10."Code" = a."RegionCodeLong"
     LEFT JOIN "Master1" m11  ON m11."Code" = a."AreaCodeLong"
-    WHERE m1.MasterType = 2 AND m1.ParentGrp = 116 and m1.CM3 = 20567;
-;"""
+    WHERE m1.MasterType = 2 AND m1.ParentGrp = 116
+    AND asales."Email" = '{user_details.get("email")}';"""
+    
+    
+    print(salesman_sql,"salesman_sql")
     
     salesman_data = run_query(salesman_sql)
     
@@ -2157,68 +2182,134 @@ async def busy_salesman_info(request: Request,salesman_id: str):
 async def salesman_ledger(request: Request):
     
     
-    print(request.state.PartyName,"PartyNamePartyNamePartyNamePartyName")
+    print(request.state.PartyName,request.state.user_details,"PartyNamePartyNamePartyNamePartyName")
     
     ledger_Sql = f"""
 
-SELECT
-    t2a."Date",
-    t2a."VchCode",
-    t2a."VchNo",
-    t2b."SrNo",
-    t2b."RecType",
-    t2a."VchType",
+        SELECT
+            t2a."Date",
+            t2a."VchCode",
+            t2a."VchNo",
+            t2b."SrNo",
+            t2b."RecType",
+            t2a."VchType",
+            
+            CASE 
+            WHEN t2a."VchType" NOT IN (9,17) THEN ABS(t2a."Value1")
+            ELSE 0
+            END AS Cr,
+
+            CASE 
+            WHEN t2a."VchType" IN (9,17) THEN ABS(t2a."Value1")
+            ELSE 0
+            END AS Dr,
+
+            CASE 
+            WHEN t2a."VchType" IN (9,17) THEN 'Debit'
+            ELSE 'Credit'
+            END AS DrCr,
+            t2a."MasterCode1" AS DebitCode,
+            m1a."Name"       AS Party1,
+
+            t2b."MasterCode1" AS CreditCode,
+            m1b."Name"        AS "Account",
+            t2a."ShortNar",
+            t2a."Value1" AS DebitValue,
+            t2b."Value1" AS CreditValue
+        FROM "Tran2" t2a
+        JOIN "Tran2" t2b
+            ON t2a."VchCode" = t2b."VchCode"
+        AND t2a."SrNo" <> t2b."SrNo"     -- avoid same row
+        JOIN "Master1" m1a
+            ON m1a."Code" = t2a."MasterCode1"
+        JOIN "Master1" m1b
+            ON m1b."Code" = t2b."MasterCode1"
+        WHERE (
+            
+            t2a."VchType" IN (14)
+            OR 
+            (t2a."VchType" IN (16) AND t2b."SrNo" = 1)
+            OR 
+            (t2a."VchType" IN (2) AND t2b."SrNo" = 2 AND t2b."RecType" = 1)
+            OR 
+            (t2a."VchType" IN (9) AND t2b."SrNo" = 2 AND t2b."RecType" = 1)
+            OR 
+            (t2a."VchType" IN (3) AND t2b."SrNo" = 2 AND t2b."RecType" = 1)
+            OR 
+            (t2a."VchType" IN (18) AND t2b."SrNo" = 2)
+            OR 
+            (t2a."VchType" IN (17) AND t2b."SrNo" = 2)
+        )
+        and m1a.CM3 = 20567
+        AND t2a."MasterCode1" <> t2b."MasterCode1"
+        ORDER BY Date ASC, t2a."VchType";
+    """
     
-    CASE 
-    WHEN t2a."VchType" NOT IN (9,17) THEN ABS(t2a."Value1")
-    ELSE 0
-    END AS Cr,
-
-    CASE 
-    WHEN t2a."VchType" IN (9,17) THEN ABS(t2a."Value1")
-    ELSE 0
-    END AS Dr,
-
-    CASE 
-    WHEN t2a."VchType" IN (9,17) THEN 'Debit'
-    ELSE 'Credit'
-    END AS DrCr,
-    t2a."MasterCode1" AS DebitCode,
-    m1a."Name"       AS Party1,
-
-    t2b."MasterCode1" AS CreditCode,
-    m1b."Name"        AS "Account",
-    t2a."ShortNar",
-    t2a."Value1" AS DebitValue,
-    t2b."Value1" AS CreditValue
-FROM "Tran2" t2a
-JOIN "Tran2" t2b
-    ON t2a."VchCode" = t2b."VchCode"
-   AND t2a."SrNo" <> t2b."SrNo"     -- avoid same row
-JOIN "Master1" m1a
-    ON m1a."Code" = t2a."MasterCode1"
-JOIN "Master1" m1b
-    ON m1b."Code" = t2b."MasterCode1"
-WHERE (
     
-    t2a."VchType" IN (14)
-    OR 
-    (t2a."VchType" IN (16) AND t2b."SrNo" = 1)
-    OR 
-    (t2a."VchType" IN (2) AND t2b."SrNo" = 2 AND t2b."RecType" = 1)
-    OR 
-    (t2a."VchType" IN (9) AND t2b."SrNo" = 2 AND t2b."RecType" = 1)
-    OR 
-    (t2a."VchType" IN (3) AND t2b."SrNo" = 2 AND t2b."RecType" = 1)
-    OR 
-    (t2a."VchType" IN (18) AND t2b."SrNo" = 2)
-    OR 
-    (t2a."VchType" IN (17) AND t2b."SrNo" = 2)
-)
-  and m1a.CM3 = 20567
-  AND t2a."MasterCode1" <> t2b."MasterCode1"
-  ORDER BY Date ASC, t2a."VchType";
-"""
+    ledger_Sql = f"""
+        SELECT
+        asales.*,
+            t2a."Date",
+            t2a."VchCode",
+            t2a."VchNo",
+            t2b."SrNo",
+            t2b."RecType",
+            t2a."VchType",
+            
+            CASE 
+            WHEN t2a."VchType" NOT IN (9,17) THEN ABS(t2a."Value1")
+            ELSE 0
+            END AS Cr,
+
+            CASE 
+            WHEN t2a."VchType" IN (9,17) THEN ABS(t2a."Value1")
+            ELSE 0
+            END AS Dr,
+
+            CASE 
+            WHEN t2a."VchType" IN (9,17) THEN 'Debit'
+            ELSE 'Credit'
+            END AS DrCr,
+            t2a."MasterCode1" AS DebitCode,
+            m1a."Name"       AS Party1,
+
+            t2b."MasterCode1" AS CreditCode,
+            m1b."Name"        AS "Account",
+            t2a."ShortNar",
+            t2a."Value1" AS DebitValue,
+            t2b."Value1" AS CreditValue
+        FROM "Tran2" t2a
+        JOIN "Tran2" t2b
+            ON t2a."VchCode" = t2b."VchCode"
+        AND t2a."SrNo" <> t2b."SrNo"     -- avoid same row
+        JOIN "Master1" m1a
+            ON m1a."Code" = t2a."MasterCode1"
+        JOIN "Master1" m1b
+            ON m1b."Code" = t2b."MasterCode1"
+        JOIN MasterAddressInfo asales 
+            ON asales.MasterCode = m1a.CM3 
+        WHERE (
+            
+            t2a."VchType" IN (14)
+            OR 
+            (t2a."VchType" IN (16) AND t2b."SrNo" = 1)
+            OR 
+            (t2a."VchType" IN (2) AND t2b."SrNo" = 2 AND t2b."RecType" = 1)
+            OR 
+            (t2a."VchType" IN (9) AND t2b."SrNo" = 2 AND t2b."RecType" = 1)
+            OR 
+            (t2a."VchType" IN (3) AND t2b."SrNo" = 2 AND t2b."RecType" = 1)
+            OR 
+            (t2a."VchType" IN (18) AND t2b."SrNo" = 2)
+            OR 
+            (t2a."VchType" IN (17) AND t2b."SrNo" = 2)
+        )
+            AND asales."Email" = '"""+request.state.user_details.get('email',"")+"""'
+        AND t2a."MasterCode1" <> t2b."MasterCode1"
+        ORDER BY Date ASC, t2a."VchType";
+    """
+    
+    
     ledger_output = run_query(ledger_Sql)
 
 
@@ -2239,48 +2330,70 @@ WHERE (
 async def salesman_pending_records(request: Request):
     
     
+    print(request.state.user_details)
     print(request.state.PartyName,"PartyNamePartyNamePartyNamePartyName")
 
     pending_records_Sql = f"""
-
-SELECT 
-        t2."Date" as Date,
-        m1."Name" as ClientName,
-        m2."Name" as Item,
-        t2.d1 As TotalQty,
-        t2.d1 * t2.d6 AS TotalAmt,
-        t2.d1 - agg.TotalValue1 AS ClearedQty,
-        (t2.d1 - agg.TotalValue1) * t2.d6 ClearedAmt,
-        agg.TotalValue1 as PendingQty,
-        agg.TotalValue1 * t2.d6 AS PendingAmt,
-        t2.VchNo,
-        t2."CM1",
-        t2."VchCode",
-        t2."MasterCode1"
-    FROM Tran2 t2
-    JOIN Master1 m1 ON m1."Code" = t2."CM1"
-    JOIN Master1 m2 ON m2."Code" = t2."MasterCode1"
-    LEFT JOIN (
         SELECT 
-            [No],
-            [MasterCode1],
-            SUM([Value1]) AS TotalValue1
-        FROM Tran3
-        GROUP BY [No],[MasterCode1]
-    ) agg 
-        ON agg.[No] = t2.[VchNo]
-       AND agg.[MasterCode1] = t2.[MasterCode1]
-    WHERE 
-        t2.[RecType] IN (4,3) 
-        AND agg.TotalValue1 > 0 
-        order by Date DESC;
-        """
+            m1a."Name",
+            t2a."Date" as Date,
+            m1."Name" as ClientName,
+            m2."Name" as Item,
+            t2a.d1 As TotalQty,
+            t2a.d1 * t2a.d6 AS TotalAmt,
+            t2a.d1 - agg.TotalValue1 AS ClearedQty,
+            (t2a.d1 - agg.TotalValue1) * t2a.d6 ClearedAmt,
+            agg.TotalValue1 as PendingQty,
+            agg.TotalValue1 * t2a.d6 AS PendingAmt,
+            t2a.VchNo,
+            t2a."CM1",
+            t2a."VchCode",
+            t2a."MasterCode1",
+            asales.*,
+            asales."Email",
+            t2a."MasterCode1"
+
+        FROM "Tran2" t2a
+
+        JOIN Master1 m1 
+            ON m1."Code" = t2a."CM1"
+
+        JOIN Master1 m2 
+            ON m2."Code" = t2a."MasterCode1"
+
+        JOIN "Master1" m1a
+            ON m1a."Code" = t2a."MasterCode1"
+
+        JOIN MasterAddressInfo asales 
+            ON asales.MasterCode = t2a.CM6 
+
+        LEFT JOIN (
+            SELECT 
+                [No],
+                [MasterCode1],
+                SUM([Value1]) AS TotalValue1
+            FROM Tran3
+            GROUP BY [No],[MasterCode1]
+        ) agg 
+            ON agg.[No] = t2a.[VchNo]
+        AND agg.[MasterCode1] = t2a.[MasterCode1]
+
+        WHERE 
+            t2a.[RecType] IN (4,3) 
+            AND agg.TotalValue1 > 0 
+            AND asales."Email" = '{request.state.user_details.get('email',"")}'
+
+        ORDER BY Date DESC;
+    """
     
 
     pending_records_output = run_query(pending_records_Sql)
+    
+    
+    print(pending_records_Sql,"pending_records_Sqlpending_records_Sql")
 
 
-    ledger_Sql = f"SELECT * from Tran1 t1 LEFT JOIN Master1 m1 on m1.Code = t1.MasterCode1 WHERE m1.Name = '{request.state.PartyName}' AND VchType = 3;"
+    ledger_Sql = f"SELECT * from Tran1 t1 LEFT JOIN Master1 m1 on m1.Code = t1.MasterCode1 WHERE m1.Name = '{request.state.user_details.get('email',"")}' AND VchType = 3;"
 
 
     ledger_output = run_query(ledger_Sql)

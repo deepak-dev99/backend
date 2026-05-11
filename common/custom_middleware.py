@@ -22,6 +22,8 @@ def verify_token(request: Request):
         # Store in request state for later access
         request.state.token = token
         request.state.user_details = user_details
+        
+        print(user_details,"user_detailsuser_details")
 
         return user_details  # optional return if you want to use it in Depends
     except ValueError:

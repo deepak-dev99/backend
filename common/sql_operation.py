@@ -178,6 +178,69 @@ class CommonDB:
                 "success": False,
                 "error": str(e)
             }
+            
+            
+    
+    def save_data_bulk(self, sql_query, data):
+        cur = self.db_connect.cursor()
+
+        try:
+            modified_query = sql_query
+
+            # ✅ Only for INSERT
+            if "INSERT" in sql_query.upper() and "RETURNING" not in sql_query.upper():
+
+                table_name = self._extract_table_name(sql_query)
+                returning_column = None
+
+                if table_name:
+                    # Priority 1: uuid
+                    if self._has_uuid_column(cur, table_name):
+                        returning_column = "uuid"
+                    else:
+                        # Priority 2: primary key (id)
+                        returning_column = self._get_primary_key(cur, table_name)
+
+                # ✅ Add RETURNING only once
+                if returning_column:
+                    modified_query = sql_query.rstrip(";") + f" RETURNING {returning_column};"
+
+            print("FINAL QUERY:", modified_query)
+
+            cur.executemany(modified_query, data)
+
+            new_id = None
+
+            # ✅ Safe fetch
+            try:
+                result = cur.fetchone()
+                if result:
+                    new_id = result[0]
+            except:
+                pass
+
+            self.db_connect.commit()
+
+            affected = cur.rowcount
+
+            cur.close()
+
+            return {
+                "success": True,
+                "rows_affected": affected,
+                "new_id": new_id
+            }
+
+        except Exception as e:
+            self.db_connect.rollback()
+            cur.close()
+
+            traceback.print_exc()
+
+            return {
+                "success": False,
+                "error": str(e)
+            }
 
     # -------------------------------
     # ✅ UPDATE / DELETE

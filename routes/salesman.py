@@ -59,6 +59,201 @@ async def salesman_creation(request: Request,salesman: Salesman.SalesmanModel = 
 
 
 
+
+@router.post("/save_fcm_token", status_code=200)
+def save_fcm_token(request: Request,credentials: Salesman.FCMTokenRequest):
+    
+    print("save_fcm_token called",request.state,request.state.user_details,credentials)
+    
+    
+    
+    sql_q = f"update salesmen set app_token = %s where uuid = %s;"
+    data = request.app.state.db.save_data(sql_q,(credentials.token,request.state.user_details['uuid'] ))
+    
+    
+    print(credentials,"credentials")
+
+
+
+
+@router.post("/checkin_salesman", status_code=200)
+async def salesman_checkin_creation(request: Request,SalesmanCheckin: Salesman.SalesmanCheckinModel = Depends(Salesman.SalesmanCheckinModel.as_form)):
+    
+    
+    
+    print(vars(request.state))
+    print(request.state.user_details,"requestrequestrequest")
+    
+    
+    salesman_uuid = request.state.user_details.get("uuid","")
+    
+    
+    
+
+    salesman_checkin_image_url = ""
+
+    if SalesmanCheckin.checkin_image:
+        salesman_checkin_image_url = os.path.join("uploads", "salesman_checkin", SalesmanCheckin.checkin_image.filename)
+        image_save_path = os.path.join(os.getcwd(), salesman_checkin_image_url)
+
+        with open(image_save_path, "wb") as f:
+            f.write(await SalesmanCheckin.checkin_image.read())
+    
+    
+    
+    sql_q = f"INSERT INTO salesman_checkin(party_id, party_name, party_address, checkin_image, checkin_time, salesman_id) VALUES (%s, %s, %s, %s, %s, %s)"
+    data = request.app.state.db.save_data(sql_q,(SalesmanCheckin.party_id, SalesmanCheckin.party_name, SalesmanCheckin.party_address, salesman_checkin_image_url, datetime.now(), salesman_uuid))
+    
+    
+    print(data,"datadatadatadata")
+
+    if(data["success"]):
+        return JSONResponse(status_code=200, content={"status": True, "message":"salesmen checkin Successfully","data": {
+            "checkin":data["new_id"]
+        }})
+    
+    else:    
+        return JSONResponse(status_code=400, content={"status": False, "message":"Something went wrong"})
+
+
+
+
+
+@router.post("/checkout_salesman", status_code=200)
+async def salesman_checkout_creation(request: Request,SalesmanCheckout: Salesman.SalesmanCheckoutModel = Depends(Salesman.SalesmanCheckoutModel.as_form)):
+    
+    
+    
+    
+
+    salesman_checkout_image_url = ""
+
+    if SalesmanCheckout.checkout_image:
+        salesman_checkout_image_url = os.path.join("uploads", "salesman_checkin", SalesmanCheckout.checkout_image.filename)
+        image_save_path = os.path.join(os.getcwd(), salesman_checkout_image_url)
+
+        with open(image_save_path, "wb") as f:
+            f.write(await SalesmanCheckout.checkout_image.read())
+    
+    
+    
+    print(SalesmanCheckout.checkin_id,"SalesmanCheckout.discussion")
+    
+    sql_q = f"update salesman_checkin set checkout_image = %s, checkout_time = %s, discussion = %s, purpose = %s, remarks = %s where uuid = %s;"
+    data = request.app.state.db.save_data(sql_q,(salesman_checkout_image_url, datetime.now(), SalesmanCheckout.discussion, SalesmanCheckout.purpose,SalesmanCheckout.remarks, SalesmanCheckout.checkin_id))
+    
+    
+    print(data,"datadatadatadata")
+
+    if(data["success"]):
+        return JSONResponse(status_code=200, content={"status": True, "message":"salesmen checkin Successfully","data": {
+            "checkin":data["new_id"]
+        }})
+    
+    else:    
+        return JSONResponse(status_code=400, content={"status": False, "message":"Something went wrong"})
+
+
+
+
+
+
+
+
+@router.get("/salesman_visit_history", status_code=200)
+async def salesman_visit_history(request: Request):
+    
+    
+    salesman_uuid = request.state.user_details.get("uuid","")
+    
+    
+    sql_q = f"""
+    SELECT 
+        uuid,
+        party_id,
+        party_name,
+        party_address,
+        checkin_image,
+        checkout_image,
+        discussion,
+        remarks,
+        purpose,
+    TO_CHAR(checkin_time::timestamp, 'YYYY-MM-DD HH24:MI:SS') AS checkin_time,
+    TO_CHAR(checkout_time::timestamp, 'YYYY-MM-DD HH24:MI:SS') AS checkout_time
+    FROM salesman_checkin
+    where salesman_id = %s
+    ORDER BY created_at DESC;
+"""
+    data = request.app.state.db.get_data_as_json(sql_q,(salesman_uuid,))
+    
+    
+    # print(data,"datadatadata")
+    return JSONResponse(status_code=200, content={"status": True, "message":"Customer Fetched Successfully","data": data})
+    
+    
+
+
+
+
+@router.get("/salesman_one_visit_history/{one_uuid}", status_code=200)
+async def salesman_one_visit_history(request: Request, one_uuid: str):
+    
+    
+    
+    print(one_uuid,"one_uuidone_uuidone_uuid")
+    
+    
+    print(request.state.user_details,"requestrequestrequest")
+    
+    
+    salesman_uuid = request.state.user_details.get("uuid","")
+    
+    
+    
+    sql_q = f"""
+        SELECT 
+            sc.party_id,
+            sc.party_name,
+            sc.uuid,
+            sc.purpose,
+            sc.discussion,
+            sc.party_address,
+            sc.checkin_image,
+            sc.checkout_image,
+            TO_CHAR(sc.checkin_time::timestamp, 'YYYY-MM-DD HH24:MI:SS') AS checkin_time,
+            TO_CHAR(sc.checkout_time::timestamp, 'YYYY-MM-DD HH24:MI:SS') AS checkout_time,
+            (
+                SELECT json_agg(
+                    jsonb_build_array(
+                        ci.lat,
+                        ci.lng
+                    )
+                )
+                FROM salesman_location ci
+                WHERE ci.salesman_uuid = sc.uuid
+            ) AS items_array
+        FROM salesman_checkin sc
+        WHERE sc.uuid = %s AND 
+        sc.salesman_id = %s
+        ;
+    """
+    data = request.app.state.db.get_data_as_json(sql_q,(one_uuid,salesman_uuid))
+    
+    
+    if(len(data) > 0):
+        return JSONResponse(status_code=200, content={"status": True, "message":"Customer Fetched Successfully","data": data[0]})
+    else:
+        return JSONResponse(status_code=200, content={"status": True, "message":"Customer Fetched Successfully","data": {}})
+    # print(data,"datadatadata")
+    
+    
+
+
+
+
+
+
+
 # @router.get("/customer-review", status_code=200)
 # async def customer_review_list(request: Request):
     
