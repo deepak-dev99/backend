@@ -1602,9 +1602,42 @@ ORDER BY d.PartyName;
 
 
 
+@router.get("/my_all_party_name", status_code=200)
+async def give_my_all_party_name(request: Request):
+    
+
+    user_details = request.state.user_details
+    
+    
+    give_my_all_party_name_Sql = f"""
+    
+    SELECT m1.Name, m1.Code, asales.Email FROM
+    Master1 m1 
+    JOIN MasterAddressInfo asales 
+        ON asales.MasterCode = m1.CM3 
+    where 
+        asales."Email" = '{user_details.get("email")}'
+        AND 
+        m1.MasterType = 2;
+"""
+    give_my_all_party_name_output = run_query(give_my_all_party_name_Sql)
+    
+    
+    
+    
+        
+    
+      
+    return JSONResponse(status_code=200, content={"status": True, "message":" Dashboard Successfully","data": give_my_all_party_name_output})
+    
+    
+
+
+
 @router.get("/salesman_party_wise_target_vs_achievement", status_code=200)
 async def salesman_party_wise_target_vs_achievement(request: Request):
     
+    user_details = request.state.user_details
     
     
     salesman_party_wise_target_vs_achievement_Sql = f"""
@@ -1633,6 +1666,19 @@ FROM (
 ) AS d
 LEFT JOIN MasterAddressInfo a
     ON a.MasterCode = d.PartyCode
+    
+    
+
+LEFT JOIN Master1 m1
+    ON a.MasterCode = m1.Code
+
+LEFT JOIN MasterAddressInfo asales 
+    ON asales.MasterCode = m1.CM3 
+
+where 
+    asales."Email" = '{user_details.get("email")}'
+
+
 ORDER BY d.PartyName;
 
 """
@@ -1962,7 +2008,7 @@ ORDER BY CAST(T3.Date AS DATE), B.VchCode;""")
 async def open_closing_amount(request: Request):
     
     
-    
+    print(request.state.PartyName,"request.state.PartyNamerequest.state.PartyName")
     open_closing_amount_sql = f"""SELECT 
             ABS(f.D1) AS OpeningBalance,
             SUM(CASE WHEN t.Value1 > 0 THEN t.Value1 ELSE 0 END) AS Credit,
@@ -2109,6 +2155,226 @@ WHERE m1.MasterType = 19;
 
 
 
+@router.get("/salesman_party_ledger_records", status_code=200)
+async def salesman_party_ledger_records(request: Request):
+    
+    user_details = request.state.user_details
+    print(user_details.get("email"),"request.staterequest.staterequest.state")
+
+    
+    salesman_sql = fledger_Sql = f"""
+SELECT
+    DISTINCT m1a."Name",
+    m1a."Code",
+    asales."WhatsAppNo",
+    asales."Contact",
+    asales."Mobile",
+    asales."Email"
+FROM "Master1" m1a
+JOIN MasterAddressInfo asales
+    ON asales.MasterCode = m1a.CM3
+
+WHERE asales."Email" = '{user_details.get("email")}'
+AND EXISTS (
+    SELECT 1
+    FROM "Tran2" t2a
+    JOIN "Tran2" t2b
+        ON t2a."VchCode" = t2b."VchCode"
+       AND t2a."SrNo" <> t2b."SrNo"
+    WHERE
+        t2a."MasterCode1" = m1a."Code"
+        AND t2a."MasterCode1" <> t2b."MasterCode1"
+        AND (
+            t2a."VchType" IN (14)
+            OR (t2a."VchType" IN (16) AND t2b."SrNo" = 1)
+            OR (t2a."VchType" IN (2) AND t2b."SrNo" = 2 AND t2b."RecType" = 1)
+            OR (t2a."VchType" IN (9) AND t2b."SrNo" = 2 AND t2b."RecType" = 1)
+            OR (t2a."VchType" IN (3) AND t2b."SrNo" = 2 AND t2b."RecType" = 1)
+            OR (t2a."VchType" IN (18) AND t2b."SrNo" = 2)
+            OR (t2a."VchType" IN (17) AND t2b."SrNo" = 2)
+        )
+);
+
+"""
+    
+    
+    
+    
+    
+    
+    
+    
+    print(salesman_sql,"salesman_sql")
+    
+    salesman_data = run_query(salesman_sql)
+    
+    
+    sql_q = """SELECT * from parties left JOIN salesmen on salesmen.uuid = parties.salesman_id where parties.status = 'Approved';"""
+    data = request.app.state.db.get_data_as_json(sql_q,())
+    
+    
+    print("salesman_data",salesman_data,"salesman_data")
+    print("data",data,"data")
+    
+    for one in data:
+        
+        salesman_data.append({
+            "Name":one.get("party_name",""),
+            "WhatsAppNo":one.get("mobile",""),
+            "Address":one.get("address","")
+        })
+
+    return JSONResponse(status_code=200, content={"status": True, "message":"salesman Successfully","data": salesman_data})
+    
+
+
+
+@router.get("/salesman_party_pending_order", status_code=200)
+async def salesman_party_pending_order(request: Request):
+    
+    user_details = request.state.user_details
+    print(user_details.get("email"),"request.staterequest.staterequest.state")
+#     salesman_sql = f""" SELECT m1.Name, m1.Code,
+#         a.WhatsAppNo,
+#         m7."Name"  AS "Country",
+#         m8."Name"  AS "State",
+#         m9."Name"  AS "City",
+#         m10."Name"  AS "Region",
+#         m11."Name"  AS "Area"
+#         from Master1 as m1
+#     LEFT JOIN MasterAddressInfo a ON a.MasterCode = m1.Code 
+#     LEFT JOIN "Master1" m7  ON m7."Code" = a."CountryCodeLong"
+#     LEFT JOIN "Master1" m8  ON m8."Code" = a."StateCodeLong"
+#     LEFT JOIN "Master1" m9  ON m9."Code" = a."CityCodeLong"
+#     LEFT JOIN "Master1" m10  ON m10."Code" = a."RegionCodeLong"
+#     LEFT JOIN "Master1" m11  ON m11."Code" = a."AreaCodeLong"
+#     WHERE m1.MasterType = 2 AND m1.ParentGrp = 116 and m1.CM3 = 20567;
+# ;"""
+    
+    # salesman_sql = f""" SELECT m1.Name, m1.Code,
+    #     asales.WhatsAppNo,
+    #     asales."Contact",
+    #     asales."Mobile",
+    #     asales."Email",
+        
+        
+    #     m7."Name"  AS "Country",
+    #     m8."Name"  AS "State",
+    #     m9."Name"  AS "City",
+    #     m10."Name"  AS "Region",
+    #     m11."Name"  AS "Area",
+    #     CONCAT(
+    #         CASE WHEN m11."Name" IS NOT NULL AND m11."Name" != '---Others---' THEN '' + m11."Name" ELSE '' END,
+    #         CASE WHEN m10."Name" IS NOT NULL AND m10."Name" != '---Others---' THEN ', ' + m10."Name" ELSE '' END,
+    #         CASE WHEN m9."Name" IS NOT NULL AND m9."Name" != '---Others---' THEN ', ' + m9."Name" ELSE '' END,
+    #         CASE WHEN m8."Name" IS NOT NULL AND m8."Name" != '---Others---' THEN ', ' + m8."Name" ELSE '' END,
+    #         CASE WHEN m7."Name" IS NOT NULL AND m7."Name" != '---Others---' THEN ', ' + m7."Name" ELSE '' END
+    #     ) AS "Address",
+    #     m1.CM3
+    #     from Master1 as m1
+    # LEFT JOIN MasterAddressInfo a ON a.MasterCode = m1.Code 
+    # LEFT JOIN MasterAddressInfo asales ON asales.MasterCode = m1.CM3 
+    # LEFT JOIN "Master1" m7  ON m7."Code" = a."CountryCodeLong"
+    # LEFT JOIN "Master1" m8  ON m8."Code" = a."StateCodeLong"
+    # LEFT JOIN "Master1" m9  ON m9."Code" = a."CityCodeLong"
+    # LEFT JOIN "Master1" m10  ON m10."Code" = a."RegionCodeLong"
+    # LEFT JOIN "Master1" m11  ON m11."Code" = a."AreaCodeLong"
+    # WHERE m1.MasterType = 2 AND m1.ParentGrp = 116
+    # AND asales."Email" = '{user_details.get("email")}';"""
+    
+    
+    salesman_sql = f"""
+    SELECT
+    m1.Name,
+    m1.Code,
+    asales.WhatsAppNo,
+    asales."Contact",
+    asales."Mobile",
+    asales."Email",
+    m7."Name"  AS "Country",
+    m8."Name"  AS "State",
+    m9."Name"  AS "City",
+    m10."Name" AS "Region",
+    m11."Name" AS "Area",
+    CONCAT(
+        CASE WHEN m11."Name" IS NOT NULL AND m11."Name" != '---Others---' THEN m11."Name" ELSE '' END,
+        CASE WHEN m10."Name" IS NOT NULL AND m10."Name" != '---Others---' THEN ', ' + m10."Name" ELSE '' END,
+        CASE WHEN m9."Name" IS NOT NULL AND m9."Name" != '---Others---' THEN ', ' + m9."Name" ELSE '' END,
+        CASE WHEN m8."Name" IS NOT NULL AND m8."Name" != '---Others---' THEN ', ' + m8."Name" ELSE '' END,
+        CASE WHEN m7."Name" IS NOT NULL AND m7."Name" != '---Others---' THEN ', ' + m7."Name" ELSE '' END
+    ) AS "Address",
+    m1.CM3
+FROM Master1 AS m1
+LEFT JOIN MasterAddressInfo a
+    ON a.MasterCode = m1.Code
+LEFT JOIN MasterAddressInfo asales
+    ON asales.MasterCode = m1.CM3
+LEFT JOIN Master1 m7
+    ON m7.Code = a.CountryCodeLong
+LEFT JOIN Master1 m8
+    ON m8.Code = a.StateCodeLong
+LEFT JOIN Master1 m9
+    ON m9.Code = a.CityCodeLong
+LEFT JOIN Master1 m10
+    ON m10.Code = a.RegionCodeLong
+LEFT JOIN Master1 m11
+    ON m11.Code = a.AreaCodeLong
+WHERE
+    m1.MasterType = 2
+    AND m1.ParentGrp = 116
+    AND asales."Email" = '{user_details.get("email")}'
+    AND EXISTS (
+        SELECT 1
+        FROM Tran2 t2
+        JOIN (
+            SELECT
+                [No],
+                [MasterCode1],
+                SUM([Value1]) AS TotalValue1
+            FROM Tran3
+            GROUP BY [No], [MasterCode1]
+        ) agg
+            ON agg.[No] = t2.[VchNo]
+           AND agg.[MasterCode1] = t2.[MasterCode1]
+        WHERE
+            t2.RecType IN (3,4)
+            AND agg.TotalValue1 > 0
+            AND t2.CM1 = m1.Code
+    );
+    """
+    
+    
+    
+    
+    
+    
+    
+    
+    print(salesman_sql,"salesman_sql")
+    
+    salesman_data = run_query(salesman_sql)
+    
+    
+    sql_q = """SELECT * from parties left JOIN salesmen on salesmen.uuid = parties.salesman_id where parties.status = 'Approved';"""
+    data = request.app.state.db.get_data_as_json(sql_q,())
+    
+    
+    print("salesman_data",salesman_data,"salesman_data")
+    print("data",data,"data")
+    
+    for one in data:
+        
+        salesman_data.append({
+            "Name":one.get("party_name",""),
+            "WhatsAppNo":one.get("mobile",""),
+            "Address":one.get("address","")
+        })
+
+    return JSONResponse(status_code=200, content={"status": True, "message":"salesman Successfully","data": salesman_data})
+    
+
+
+
 
 
 @router.get("/salesman_party", status_code=200)
@@ -2138,11 +2404,20 @@ async def salesman_party(request: Request):
         asales."Contact",
         asales."Mobile",
         asales."Email",
+        
+        
         m7."Name"  AS "Country",
         m8."Name"  AS "State",
         m9."Name"  AS "City",
         m10."Name"  AS "Region",
         m11."Name"  AS "Area",
+        CONCAT(
+            CASE WHEN m11."Name" IS NOT NULL AND m11."Name" != '---Others---' THEN '' + m11."Name" ELSE '' END,
+            CASE WHEN m10."Name" IS NOT NULL AND m10."Name" != '---Others---' THEN ', ' + m10."Name" ELSE '' END,
+            CASE WHEN m9."Name" IS NOT NULL AND m9."Name" != '---Others---' THEN ', ' + m9."Name" ELSE '' END,
+            CASE WHEN m8."Name" IS NOT NULL AND m8."Name" != '---Others---' THEN ', ' + m8."Name" ELSE '' END,
+            CASE WHEN m7."Name" IS NOT NULL AND m7."Name" != '---Others---' THEN ', ' + m7."Name" ELSE '' END
+        ) AS "Address",
         m1.CM3
         from Master1 as m1
     LEFT JOIN MasterAddressInfo a ON a.MasterCode = m1.Code 
@@ -2156,10 +2431,32 @@ async def salesman_party(request: Request):
     AND asales."Email" = '{user_details.get("email")}';"""
     
     
+    
+    
+    
+    
+    
+    
+    
     print(salesman_sql,"salesman_sql")
     
     salesman_data = run_query(salesman_sql)
     
+    
+    sql_q = """SELECT * from parties left JOIN salesmen on salesmen.uuid = parties.salesman_id where parties.status = 'Approved';"""
+    data = request.app.state.db.get_data_as_json(sql_q,())
+    
+    
+    print("salesman_data",salesman_data,"salesman_data")
+    print("data",data,"data")
+    
+    for one in data:
+        
+        salesman_data.append({
+            "Name":one.get("party_name",""),
+            "WhatsAppNo":one.get("mobile",""),
+            "Address":one.get("address","")
+        })
 
     return JSONResponse(status_code=200, content={"status": True, "message":"salesman Successfully","data": salesman_data})
     
@@ -2327,66 +2624,104 @@ async def salesman_ledger(request: Request):
     
 
 @router.get("/salesman_pending_records", status_code=200)
-async def salesman_pending_records(request: Request):
+async def salesman_pending_records(request: Request,
+    party_code: int = Query(..., description="Party Code")
+    ):
+    
+    
+    
+    
     
     
     print(request.state.user_details)
     print(request.state.PartyName,"PartyNamePartyNamePartyNamePartyName")
 
-    pending_records_Sql = f"""
-        SELECT 
-            m1a."Name",
-            t2a."Date" as Date,
-            m1."Name" as ClientName,
-            m2."Name" as Item,
-            t2a.d1 As TotalQty,
-            t2a.d1 * t2a.d6 AS TotalAmt,
-            t2a.d1 - agg.TotalValue1 AS ClearedQty,
-            (t2a.d1 - agg.TotalValue1) * t2a.d6 ClearedAmt,
-            agg.TotalValue1 as PendingQty,
-            agg.TotalValue1 * t2a.d6 AS PendingAmt,
-            t2a.VchNo,
-            t2a."CM1",
-            t2a."VchCode",
-            t2a."MasterCode1",
-            asales.*,
-            asales."Email",
-            t2a."MasterCode1"
+    # pending_records_Sql = f"""
+    #     SELECT 
+    #         m1a."Name",
+    #         t2a."Date" as Date,
+    #         m1."Name" as ClientName,
+    #         m2."Name" as Item,
+    #         t2a.d1 As TotalQty,
+    #         t2a.d1 * t2a.d6 AS TotalAmt,
+    #         t2a.d1 - agg.TotalValue1 AS ClearedQty,
+    #         (t2a.d1 - agg.TotalValue1) * t2a.d6 ClearedAmt,
+    #         agg.TotalValue1 as PendingQty,
+    #         agg.TotalValue1 * t2a.d6 AS PendingAmt,
+    #         t2a.VchNo,
+    #         t2a."CM1",
+    #         t2a."VchCode",
+    #         t2a."MasterCode1",
+    #         asales.*,
+    #         asales."Email",
+    #         t2a."MasterCode1"
 
-        FROM "Tran2" t2a
+    #     FROM "Tran2" t2a
 
-        JOIN Master1 m1 
-            ON m1."Code" = t2a."CM1"
+    #     JOIN Master1 m1 
+    #         ON m1."Code" = t2a."CM1"
 
-        JOIN Master1 m2 
-            ON m2."Code" = t2a."MasterCode1"
+    #     JOIN Master1 m2 
+    #         ON m2."Code" = t2a."MasterCode1"
 
-        JOIN "Master1" m1a
-            ON m1a."Code" = t2a."MasterCode1"
+    #     JOIN "Master1" m1a
+    #         ON m1a."Code" = t2a."MasterCode1"
 
-        JOIN MasterAddressInfo asales 
-            ON asales.MasterCode = t2a.CM6 
+    #     JOIN MasterAddressInfo asales 
+    #         ON asales.MasterCode = m1a.CM6 
 
-        LEFT JOIN (
-            SELECT 
-                [No],
-                [MasterCode1],
-                SUM([Value1]) AS TotalValue1
-            FROM Tran3
-            GROUP BY [No],[MasterCode1]
-        ) agg 
-            ON agg.[No] = t2a.[VchNo]
-        AND agg.[MasterCode1] = t2a.[MasterCode1]
+    #     LEFT JOIN (
+    #         SELECT 
+    #             [No],
+    #             [MasterCode1],
+    #             SUM([Value1]) AS TotalValue1
+    #         FROM Tran3
+    #         GROUP BY [No],[MasterCode1]
+    #     ) agg 
+    #         ON agg.[No] = t2a.[VchNo]
+    #     AND agg.[MasterCode1] = t2a.[MasterCode1]
 
-        WHERE 
-            t2a.[RecType] IN (4,3) 
-            AND agg.TotalValue1 > 0 
-            AND asales."Email" = '{request.state.user_details.get('email',"")}'
+    #     WHERE 
+    #         t2a.[RecType] IN (4,3) 
+    #         AND agg.TotalValue1 > 0 
+    #         AND asales."Email" = '{request.state.user_details.get('email',"")}'
 
-        ORDER BY Date DESC;
+    #     ORDER BY Date DESC;
+    # """
+    pending_records_Sql = """
+    SELECT 
+    t2."Date" as Date,
+    m1."Name" as ClientName,
+    m2."Name" as Item,
+    t2.d1 As TotalQty,
+    t2.d1 * t2.d6 AS TotalAmt,
+    t2.d1 - agg.TotalValue1 AS ClearedQty,
+    (t2.d1 - agg.TotalValue1) * t2.d6 ClearedAmt,
+    agg.TotalValue1 as PendingQty,
+    agg.TotalValue1 * t2.d6 AS PendingAmt,
+    t2.VchNo,
+    t2."CM1",
+    t2."VchCode",
+    t2."MasterCode1"
+FROM Tran2 t2
+JOIN Master1 m1 ON m1."Code" = t2."CM1"
+JOIN Master1 m2 ON m2."Code" = t2."MasterCode1"
+LEFT JOIN (
+    SELECT 
+        [No],
+        [MasterCode1],
+        SUM([Value1]) AS TotalValue1
+    FROM Tran3
+    GROUP BY [No],[MasterCode1]
+) agg 
+    ON agg.[No] = t2.[VchNo]
+   AND agg.[MasterCode1] = t2.[MasterCode1]
+WHERE 
+    t2.[RecType] IN (4,3) 
+    AND agg.TotalValue1 > 0 
+    and m1.Code = """+str(party_code)+"""
+    order by Date DESC;
     """
-    
-
     pending_records_output = run_query(pending_records_Sql)
     
     
@@ -2407,5 +2742,71 @@ async def salesman_pending_records(request: Request):
     
     # print(final_data,"cnr_outputcnr_outputcnr_output")
     return JSONResponse(status_code=200, content={"status": True, "message":"user_dashboard_cn_cnr Dashboard Successfully","data": final_data})
+    
+
+
+
+
+
+
+
+
+
+
+@router.get("/salesman_open_closing_amount", status_code=200)
+async def salesman_open_closing_amount(
+    request: Request,
+    party_name: str = Query(..., description="Party Name")
+):
+    
+    
+    print(party_name,"party_nameparty_nameparty_name")
+    
+    
+    
+    
+    
+    open_closing_amount_sql = f"""SELECT 
+            ABS(f.D1) AS OpeningBalance,
+            SUM(CASE WHEN t.Value1 > 0 THEN t.Value1 ELSE 0 END) AS Credit,
+            ABS(SUM(CASE WHEN t.Value1 < 0 THEN t.Value1 ELSE 0 END)) AS Debit,
+            SUM(t.Value1) AS NetTotal,
+            ABS(f.D1 + SUM(t.Value1)) AS ClosingBalance
+        FROM Tran2 t
+        JOIN Master1 m ON t.MasterCode1 = m.Code
+        JOIN Folio1 f ON f.MasterCode = m.Code
+        WHERE m.Name = '{party_name}'
+        GROUP BY f.D1;"""
+        
+        
+    open_closing_amount = run_query(open_closing_amount_sql)
+    
+    
+    if(len(open_closing_amount) > 0):
+        open_closing_amount = open_closing_amount[0]
+    else:
+        
+        open_closing_same_amount_sql = f"""
+            SELECT 
+                ABS(f.D1) AS OpeningBalance,
+                0 AS Credit,
+                0 AS Debit,
+                0 NetTotal,
+                ABS(f.D1) AS ClosingBalance
+            FROM Folio1 f join "Master1" m ON f.MasterCode = m.Code
+            WHERE m.Name = '{party_name}';"""
+        open_closing_same_amount = run_query(open_closing_same_amount_sql)
+        
+        print(open_closing_same_amount,"open_closing_same_amountopen_closing_same_amount")
+        
+        if(len(open_closing_same_amount) > 0):
+            open_closing_amount = open_closing_same_amount[0]
+            
+        else:
+            open_closing_amount = {}
+    
+    
+
+    return JSONResponse(status_code=200, content={"status": True, "message":"open_closing_amount Successfully","data": open_closing_amount})
     
     

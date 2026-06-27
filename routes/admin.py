@@ -1,4 +1,6 @@
 from base import *
+from models import Admin
+
 
 
 router = APIRouter()
@@ -184,3 +186,46 @@ async def salesman_one_visit_history(request: Request, one_uuid: str):
         return JSONResponse(status_code=200, content={"status": True, "message":"Customer Fetched Successfully","data": data[0]})
     else:
         return JSONResponse(status_code=200, content={"status": True, "message":"Customer Fetched Successfully","data": {}})
+    
+    
+    
+    
+
+@router.get("/temp_parties_list", status_code=200)
+async def get_temp_parties_list(request: Request):
+    
+    
+    sql_q = f"""SELECT parties.party_name, parties.uuid AS id, parties.owner_name, parties.mobile, parties.gst, parties.address,parties.status, salesmen.name as salesman_name from parties left JOIN salesmen on salesmen.uuid = parties.salesman_id;"""
+    data = request.app.state.db.get_data_as_json(sql_q,())
+    
+    return JSONResponse(status_code=200, content={"status": True, "message":"Parties List Fetched Successfully","data": data})
+    
+    
+    
+
+@router.patch("/approve-party-request/{one_uuid}", status_code=200)
+def update_approve_party_request(request: Request, one_uuid:str):
+    
+    
+    
+    sql_q = f"update parties set status = 'Approved' where uuid = %s;"
+    data = request.app.state.db.save_data(sql_q,(one_uuid,))
+    
+    
+    return JSONResponse(status_code=200, content={"status": True, "message":"Parties List Fetched Successfully","data": data})
+    
+    
+    
+
+
+@router.patch("/reject-party-request/{one_uuid}", status_code=200)
+def update_reject_party_request(request: Request, one_uuid:str):
+    
+    
+    
+    sql_q = f"update parties set status = 'Rejected' where uuid = %s;"
+    data = request.app.state.db.save_data(sql_q,(one_uuid,))
+    
+    
+    return JSONResponse(status_code=200, content={"status": True, "message":"Parties List Fetched Successfully","data": data})
+    

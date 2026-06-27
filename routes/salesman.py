@@ -247,7 +247,43 @@ async def salesman_one_visit_history(request: Request, one_uuid: str):
     # print(data,"datadatadata")
     
     
+    
+    
 
+
+
+
+@router.post("/add_party", status_code=200)
+def save_add_party(request: Request,salesmanAddParty: Salesman.SalesmanAddPartyModel):
+    
+    sql_q = """
+        INSERT INTO parties (
+            party_name,
+            owner_name,
+            mobile,
+            gst,
+            address,
+            salesman_id,
+            status
+        )
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
+    """
+    data = request.app.state.db.save_data(sql_q,(
+        salesmanAddParty.party_name,
+        salesmanAddParty.owner_name,
+        salesmanAddParty.mobile,
+        salesmanAddParty.gst,
+        salesmanAddParty.address,
+        request.state.user_details['uuid'],
+        "Pending"
+    ))
+    
+    if(data["success"]):
+        return JSONResponse(status_code=200, content={"status": True, "message":"salesmen Party created Successfully","data": data})
+    
+    else:    
+        return JSONResponse(status_code=400, content={"status": False, "message":"Something went wrong"})
+    
 
 
 

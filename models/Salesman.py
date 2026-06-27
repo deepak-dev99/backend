@@ -8,6 +8,17 @@ class FCMTokenRequest(BaseModel):
 
 
 
+
+
+class SalesmanAddPartyModel(BaseModel):
+    party_name: str 
+    owner_name: str 
+    mobile: str
+    gst: str
+    address: str
+
+
+
 class SalesmanModel(BaseModel):
     name: str
     email: Optional[EmailStr] = None

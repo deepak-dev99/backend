@@ -20,7 +20,7 @@ app.add_middleware(
 )
 
 
-@app.route("/home")
+@app.get("/home")
 
 def home():
     print("home called")
@@ -28,6 +28,22 @@ def home():
     
     return "fasfsadsa"
 
+
+PDF_DIR = os.path.join(os.getcwd(),"pdf_file")
+
+@app.get("/api/view_pdf/{pdf_name}")
+def view_pdf(pdf_name: str):
+        
+    file_path = os.path.join(PDF_DIR, f"{pdf_name}")
+
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="PDF not found")
+
+    return FileResponse(
+        path=file_path,
+        media_type="application/pdf",
+        filename=f"{pdf_name}.pdf"
+    )
 
 
  

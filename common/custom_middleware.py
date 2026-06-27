@@ -6,10 +6,31 @@ import traceback
 def verify_token(request: Request):
     # Get the authorization header
     auth_header = request.headers.get("authorization")
+    
+    
+    print("auth_headerauth_header",request.url,auth_header,auth_header)
+    
+    
 
     if not auth_header:
         raise HTTPException(status_code=401, detail="Missing Authorization header")
 
+    if "refresh_token" in str(request.url):
+        
+        print("refreshrefreshrefreshrequestrefresh_tokenrefresh_token")
+        request.state.token = token
+        user_details = caa.decode_access_token(token, False)
+        request.state.user_details = user_details
+        print(user_details,"decode_access_token is false")
+        
+        
+        
+        
+        
+        return ""
+        
+        
+        
     try:
         # Expecting "Bearer <token>"
         scheme, token = auth_header.split(" ")
@@ -17,7 +38,9 @@ def verify_token(request: Request):
             raise HTTPException(status_code=401, detail="Invalid token scheme")
 
         # Decode and verify token
-        user_details = caa.decode_access_token(token)
+        
+        print("tokentokentoken=>",token,"<=tokentokentoken")
+        user_details = caa.decode_access_token(token, True)
 
         # Store in request state for later access
         request.state.token = token
@@ -54,7 +77,7 @@ def token_busy_info(request: Request):
             raise HTTPException(status_code=403, detail="Invalid token scheme")
 
         # Decode and verify token
-        user_details = caa.decode_access_token(token)
+        user_details = caa.decode_access_token(token, True)
 
         # Store in request state for later access
         request.state.token = token
@@ -67,10 +90,11 @@ def token_busy_info(request: Request):
         # sqal_q = f"SELECT TOP 1 PartyName FROM BillingDet where Email = '{user_details["email"]}';"
 
         sqal_q = ""
-        print(user_details,"user_detailsuser_details")\
+        print(user_details["userType"],"user_detailsuser_details")\
             
-        if(user_details["userType"] != "admin_team" and user_details["userType"] != "customer"):
-                
+        if(user_details["userType"] != "admin_team" and user_details["userType"] == "customer"):
+            print(user_details["gst"])
+            print(user_details["pan"])
             if(user_details and user_details["gst"] and user_details["pan"]):
                 sqal_q = f"SELECT Name as PartyName FROM MasterAddressInfo ma Join Master1 m on m.Code = ma.MasterCode where GSTNo = '{user_details["gst"]}' AND ITPAN='{user_details["pan"]}' AND Email = '{user_details["email"]}';"
             

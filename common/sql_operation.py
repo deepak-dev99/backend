@@ -153,7 +153,8 @@ class CommonDB:
                 result = cur.fetchone()
                 if result:
                     new_id = result[0]
-            except:
+            except Exception as err:
+                print(err)                
                 pass
 
             self.db_connect.commit()
@@ -169,6 +170,7 @@ class CommonDB:
             }
 
         except Exception as e:
+            print(e)     
             self.db_connect.rollback()
             cur.close()
 
